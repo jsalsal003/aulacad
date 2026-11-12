@@ -99,6 +99,8 @@ button{font:inherit;color:inherit}
 .dimbox[data-k=r] input{padding-right:14px}
 #selrect{position:absolute;border:1.5px dashed var(--accent);background:rgba(29,111,224,.08);pointer-events:none;display:none}
 #hint{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);background:rgba(31,42,55,.85);color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;pointer-events:none;white-space:nowrap}
+#alignHint{position:absolute;z-index:12;left:50%;top:12px;transform:translateX(-50%);background:rgba(31,42,55,.9);color:#fff;padding:8px 16px;border-radius:20px;font-size:13.5px;pointer-events:none;max-width:calc(100% - 24px);text-align:center}
+#alignHint kbd{background:#fff;color:#1f2a37;border-radius:4px;padding:0 5px;font-size:12px}
 
 /* barra de estado */
 #statusbar{position:absolute;z-index:10;right:12px;bottom:12px;display:flex;gap:14px;align-items:center;background:#fff;border-radius:8px;box-shadow:var(--shadow);padding:6px 10px;font-size:12.5px;color:#3e4a58}
@@ -226,14 +228,7 @@ kbd{background:#f2f4f7;border:1px solid #d5dbe2;border-bottom-width:2px;border-r
       </div>
       <div id="inspector" hidden></div>
       <div id="hint">Arrastra una forma de la derecha hasta el plano de trabajo</div>
-      <div class="pop" id="popAlign">
-        <button class="close" data-close>×</button><h4>Alinear la selección</h4>
-        <div class="grid3">
-          <b>X</b><button data-al="0,min">⇤ Izquierda</button><button data-al="0,mid">Centro</button><button data-al="0,max">Derecha ⇥</button>
-          <b>Y</b><button data-al="1,min">Delante</button><button data-al="1,mid">Centro</button><button data-al="1,max">Detrás</button>
-          <b>Z</b><button data-al="2,min">Abajo</button><button data-al="2,mid">Medio</button><button data-al="2,max">Arriba</button>
-        </div>
-      </div>
+      <div id="alignHint" style="display:none">Pulsa un <b>punto negro</b> para alinear · Pincha una figura para dejarla <b>fija</b> · <kbd>Esc</kbd> para terminar</div>
       <div class="pop" id="popMirror">
         <button class="close" data-close>×</button><h4>Reflejar (dar la vuelta) la selección</h4>
         <div style="display:flex;gap:8px">
@@ -1485,6 +1480,9 @@ function rebuildScene() {
 function setSelection(list) {
   const old = selection;
   selection = list.filter((n, i) => list.indexOf(n) === i && !n.hidden);
+  if (alignMode && (selection.length !== old.length || selection.some(n => !old.includes(n)))) {
+    const now = selection; selection = old; exitAlign(); selection = now; // el modo alinear se cierra al cambiar la selección
+  }
   for (const n of new Set([...old, ...selection])) decorate(n);
   selectionChanged();
 }
@@ -1569,7 +1567,7 @@ function addRot(axis) {
 }
 function buildHandles() {
   gizmo.clear(); handles = []; hovered = null;
-  if (!selection.length || placing) return;
+  if (!selection.length || placing || alignMode) return;
   if (selection.some(n => n.locked)) return;
   if (selection.length === 1) {
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) addHandle('corner', [sx, sy], HM.white);
@@ -1930,6 +1928,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 viewport.addEventListener('scroll', () => { viewport.scrollTop = 0; viewport.scrollLeft = 0; });
 canvas.addEventListener('pointerleave', () => {
   if (drag) return;
+  if (alignMode) alignPreview(null);
   setHover(null);
   if (!dims || !dims.edit) hideDims();
 });
@@ -1960,6 +1959,13 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   if (e.button !== 0) return;
+  if (alignMode) {
+    const d = pickAlign(mx, my);
+    if (d) { alignApply(d); drag = { type: 'none' }; return; }
+    const ah = pickObject(mx, my);
+    if (ah && selection.includes(ah.object.userData.node)) { alignSetKey(ah.object.userData.node); drag = { type: 'none' }; return; }
+    exitAlign();   // pinchar fuera: se sale del modo alinear y sigue como un clic normal
+  }
   const h = pickHandle(mx, my);
   if (h) { startHandle(h, mx, my, e); return; }
   const hit = pickObject(mx, my);
@@ -1982,6 +1988,13 @@ window.addEventListener('pointermove', e => {
   const [mx, my] = local(e);
   if (placing) { onPlacingMove(e, mx, my); return; }
   if (!drag) {
+    if (e.target === canvas && alignMode) {
+      const d = pickAlign(mx, my);
+      if (e.pointerType === 'mouse') alignPreview(d);   // en táctil no hay "pasar por encima": se aplica al tocar
+      const over = !d && pickObject(mx, my);
+      canvas.style.cursor = d || (over && selection.includes(over.object.userData.node)) ? 'pointer' : 'default';
+      return;
+    }
     if (e.target === canvas) {
       const h = pickHandle(mx, my);
       setHover(h);
@@ -2445,13 +2458,131 @@ function mirror(axis) {
   selection.forEach(n => setFromEff(n, S.clone().multiply(effMatrix(n))));
   rebuildScene(); commit();
 }
-function align(axis, where) {
-  if (selection.length < 2) { toast('Selecciona 2 o más formas para alinearlas'); return; }
-  const B = selBox();
+// Alinea la selección en un eje. Si hay pieza de referencia (key), esa no se mueve y las demás se alinean con ella.
+function alignNoCommit(axis, where, key) {
+  const B = key ? worldBox(key) : selBox();
   const get = (b, w) => w === 'min' ? b.min.getComponent(axis) : w === 'max' ? b.max.getComponent(axis) : (b.min.getComponent(axis) + b.max.getComponent(axis)) / 2;
   const target = get(B, where);
-  selection.forEach(n => { n.pos[axis] = r4(n.pos[axis] + target - get(worldBox(n), where)); applyTransform(n); });
+  selection.forEach(n => { if (n === key) return; n.pos[axis] = r4(n.pos[axis] + target - get(worldBox(n), where)); applyTransform(n); });
+}
+function align(axis, where, key = null) {
+  if (selection.length < 2) { toast('Selecciona 2 o más formas para alinearlas'); return; }
+  alignNoCommit(axis, where, key);
   commit(); updateInspectorValues();
+}
+
+/* ---------- modo alinear (como en Tinkercad) ----------
+   Salen 3 puntos negros por eje (X, Y y Z: un extremo, el centro y el otro extremo).
+   Al pasar el ratón por un punto se ve cómo quedaría; al pulsarlo se aplica.
+   Si se pincha una de las figuras seleccionadas, esa queda fija (referencia) y las demás se alinean con ella. */
+const alignGizmo = new THREE.Group(); alignGizmo.renderOrder = 1000; scene.add(alignGizmo);
+const AL = {
+  dot: new THREE.MeshBasicMaterial({ color: 0x2a2f36, depthTest: false }),
+  hover: new THREE.MeshBasicMaterial({ color: 0xff5a1f, depthTest: false }),
+  line: new THREE.LineBasicMaterial({ color: 0x2a2f36, depthTest: false, transparent: true, opacity: 0.45 }),
+  key: new THREE.LineBasicMaterial({ color: 0xff5a1f, depthTest: false }),
+  pick: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false }),
+};
+const alDotGeo = new THREE.SphereGeometry(1, 16, 12);
+let alignMode = null; // { key, dots: [{mesh, pick, axis, where}], lines: [], keyBox, hover, preview: [pos...] | null, box }
+function enterAlign() {
+  if (selection.length < 2) { toast('Selecciona 2 o más formas para alinearlas'); return; }
+  if (selection.some(n => n.locked)) { toast('Hay formas bloqueadas en la selección'); return; }
+  closePops(); hideDims();
+  alignMode = { key: null, dots: [], lines: [], hover: null, preview: null, box: selBox() };
+  for (let axis = 0; axis < 3; axis++) {
+    for (const where of ['min', 'mid', 'max']) {
+      const mesh = new THREE.Mesh(alDotGeo, AL.dot); mesh.renderOrder = 1002;
+      const pick = new THREE.Mesh(alDotGeo, AL.pick); pick.renderOrder = 1001;
+      const d = { mesh, pick, axis, where };
+      pick.userData.al = d;
+      alignGizmo.add(mesh, pick);
+      alignMode.dots.push(d);
+    }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
+    const line = new THREE.Line(lg, AL.line); line.renderOrder = 1000; line.frustumCulled = false;
+    alignGizmo.add(line); alignMode.lines.push(line);
+  }
+  const kb = new THREE.Box3Helper(new THREE.Box3(), 0xff5a1f); kb.material = AL.key; kb.renderOrder = 1003; kb.visible = false;
+  alignGizmo.add(kb); alignMode.keyBox = kb;
+  buildHandles();
+  $('#tAlign').classList.add('on');
+  $('#alignHint').style.display = '';
+  dirty = true;
+}
+function exitAlign() {
+  if (!alignMode) return;
+  alignUnpreview();
+  alignGizmo.traverse(o => { if (o.isLine && o !== alignMode.keyBox && o.geometry) o.geometry.dispose(); });
+  alignGizmo.clear();
+  alignMode = null;
+  $('#tAlign').classList.remove('on');
+  $('#alignHint').style.display = 'none';
+  canvas.style.cursor = 'default';
+  buildHandles();
+  dirty = true;
+}
+function updateAlignGizmo() {
+  const A = alignMode;
+  if (!A.preview) A.box = selBox();     // mientras se previsualiza, los puntos no se mueven
+  const B = A.box, C = B.getCenter(V()), cp = camera.position;
+  const off = pxAt(C) * 30;
+  const y0 = cp.y < C.y ? B.min.y - off : B.max.y + off;   // fila X: en el lado que mira a la cámara
+  const x0 = cp.x < C.x ? B.min.x - off : B.max.x + off;   // fila Y: también en el lado de la cámara
+  const x1 = cp.x < C.x ? B.max.x + off : B.min.x - off;   // columna Z: en la esquina contraria, para no taparse con la fila Y
+  const at = (b, w, i) => w === 'min' ? b.min.getComponent(i) : w === 'max' ? b.max.getComponent(i) : (b.min.getComponent(i) + b.max.getComponent(i)) / 2;
+  for (const d of A.dots) {
+    const p = d.axis === 0 ? V(at(B, d.where, 0), y0, B.min.z)
+      : d.axis === 1 ? V(x0, at(B, d.where, 1), B.min.z)
+        : V(x1, y0, at(B, d.where, 2));
+    const s = pxAt(p);
+    d.mesh.position.copy(p); d.mesh.scale.setScalar(s * 6);
+    d.pick.position.copy(p); d.pick.scale.setScalar(s * 12);
+    d.mesh.material = A.hover === d ? AL.hover : AL.dot;
+  }
+  const ends = [[V(B.min.x, y0, B.min.z), V(B.max.x, y0, B.min.z)], [V(x0, B.min.y, B.min.z), V(x0, B.max.y, B.min.z)], [V(x1, y0, B.min.z), V(x1, y0, B.max.z)]];
+  ends.forEach(([a, b], i) => {
+    const attr = A.lines[i].geometry.attributes.position;
+    attr.setXYZ(0, a.x, a.y, a.z); attr.setXYZ(1, b.x, b.y, b.z); attr.needsUpdate = true;
+  });
+  A.keyBox.visible = !!A.key;
+  if (A.key) A.keyBox.box.copy(worldBox(A.key));
+}
+function pickAlign(mx, my) {
+  if (!alignMode) return null;
+  updateAlignGizmo();
+  alignGizmo.updateMatrixWorld(true);
+  setRay(mx, my);
+  const hit = raycaster.intersectObjects(alignMode.dots.map(d => d.pick), false)[0];
+  return hit ? hit.object.userData.al : null;
+}
+function alignPreview(d) {
+  const A = alignMode;
+  if (A.hover === d) return;
+  alignUnpreview();
+  A.hover = d;
+  if (d) { A.preview = selection.map(n => n.pos.slice()); alignNoCommit(d.axis, d.where, A.key); }
+  dirty = true;
+}
+function alignUnpreview() {
+  const A = alignMode;
+  if (!A || !A.preview) { if (A) A.hover = null; return; }
+  selection.forEach((n, i) => { n.pos = A.preview[i]; applyTransform(n); });
+  A.preview = null; A.hover = null;
+  dirty = true;
+}
+function alignApply(d) {
+  const A = alignMode;
+  if (A.preview && A.hover === d) { A.preview = null; A.hover = null; commit(); updateInspectorValues(); }
+  else { alignUnpreview(); align(d.axis, d.where, A.key); }
+  A.box = selBox();
+  dirty = true;
+}
+function alignSetKey(n) {
+  alignUnpreview();
+  alignMode.key = alignMode.key === n ? null : n;
+  toast(alignMode.key ? 'Esa figura queda fija: las demás se alinean con ella' : 'Sin figura fija: se alinean todas entre sí');
+  dirty = true;
 }
 
 /* ---------- deshacer / rehacer ---------- */
@@ -2468,6 +2599,7 @@ function commit() {
   updateToolbar();
 }
 function restore(s) {
+  exitAlign();
   const ids = selection.map(n => n.id);
   eachNode(nodes, n => disposeGeo(n));
   nodes = JSON.parse(s);
@@ -2622,12 +2754,11 @@ function updateToolbar() {
 $('#tCopy').onclick = copy; $('#tPaste').onclick = paste; $('#tDup').onclick = duplicate; $('#tDel').onclick = del;
 $('#tUndo').onclick = undo; $('#tRedo').onclick = redo; $('#tGroup').onclick = group; $('#tUngroup').onclick = ungroup;
 $('#tShowAll').onclick = showAll;
-$('#tAlign').onclick = () => togglePop('#popAlign');
+$('#tAlign').onclick = () => { if (alignMode) exitAlign(); else enterAlign(); };
 $('#tMirror').onclick = () => togglePop('#popMirror');
 function togglePop(id) { const p = $(id), was = p.classList.contains('show'); closePops(); if (!was) p.classList.add('show'); }
 function closePops() { $$('.pop').forEach(p => p.classList.remove('show')); }
 $$('.pop [data-close]').forEach(b => b.onclick = closePops);
-$$('[data-al]').forEach(b => b.onclick = () => { const [a, w] = b.dataset.al.split(','); align(+a, w); });
 $$('[data-mi]').forEach(b => b.onclick = () => mirror(+b.dataset.mi));
 $('#vHome').onclick = homeView; $('#vFit').onclick = fitView;
 $('#vIn').onclick = () => animateView({ r: view.r / 1.4 }, 200);
@@ -2735,11 +2866,11 @@ window.addEventListener('keydown', e => {
   else if (ctrl && k === 'l') toggleLock();
   else if (ctrl && k === 'h') { if (e.shiftKey) showAll(); else hideSel(); }
   else if (e.key === 'Delete' || e.key === 'Backspace') del();
-  else if (e.key === 'Escape') { if (placing) cancelPlacing(); else { closePops(); setSelection([]); } }
+  else if (e.key === 'Escape') { if (placing) cancelPlacing(); else if (alignMode) exitAlign(); else { closePops(); setSelection([]); } }
   else if (e.key.startsWith('Arrow')) nudge(e.key, e.shiftKey, ctrl);
   else if (ctrl) handled = false;
   else if (k === 'd') dropToPlane();
-  else if (k === 'l') togglePop('#popAlign');
+  else if (k === 'l') { if (alignMode) exitAlign(); else enterAlign(); }
   else if (k === 'm') togglePop('#popMirror');
   else if (k === 'h') setHole(true);
   else if (k === 's') setHole(false);
@@ -3066,6 +3197,7 @@ function render() {
   if (!dirty) return;
   dirty = false;
   updateGizmo();
+  if (alignMode) updateAlignGizmo();
   if (dims) updateDims();
   const W = viewport.clientWidth, H = viewport.clientHeight;
   renderer.setScissorTest(false);
@@ -3112,7 +3244,7 @@ function init() {
 }
 init();
 // acceso para depuración desde la consola
-window.AulaCAD = { get nodes() { return nodes; }, get selection() { return selection; }, makePrim, rebuildScene, setSelection, commit,
+window.AulaCAD = { get nodes() { return nodes; }, get selection() { return selection; }, get alignMode() { return alignMode; }, makePrim, rebuildScene, setSelection, commit,
   group, ungroup, mirror, align, duplicate, undo, redo, buildSTL, parseSTL, nodeGeo, worldBox, view, project,
   get handles() { updateGizmo(); return handles; },
   add(n) { nodes.push(n); rebuildScene(); return n; } };
