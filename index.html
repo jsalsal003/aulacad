@@ -1291,9 +1291,10 @@ function buildGrid() {
   const w = planeSize, l = planeSize;
   const base = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshBasicMaterial({
     color: 0xd2e3f3, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 }));
+  base.name = 'base';
   gridGroup.add(base);
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.ShadowMaterial({ opacity: 0.2, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-  shadow.receiveShadow = true;
+  shadow.receiveShadow = true; shadow.name = 'shadow';
   gridGroup.add(shadow);
   const mk = (step, color, opacity) => {
     const pts = [];
@@ -1306,7 +1307,24 @@ function buildGrid() {
   gridGroup.add(minor, mk(10, 0x7aa0cc, 0.9));
   const bp = [-w / 2, -l / 2, 0, w / 2, -l / 2, 0, w / 2, l / 2, 0, -w / 2, l / 2, 0];
   const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
-  gridGroup.add(new THREE.LineLoop(bg, new THREE.LineBasicMaterial({ color: 0x3f73b8 })));
+  gridGroup.add(new THREE.LineLoop(bg, new THREE.LineBasicMaterial({ color: 0x3f73b8, transparent: true, opacity: 1 })));
+  gridGroup.traverse(o => { if (o.isLine) o.userData.op = o.material.opacity; });
+  gridBelow = null; // se vuelve a aplicar en updateCamera()
+  dirty = true;
+}
+/* Mirando desde debajo de la rejilla (como en Tinkercad): el plano se vuelve translúcido para ver las piezas,
+   que están encima. Si no, solo se veía la base de cada pieza y parecía que faltaban caras. */
+let gridBelow = null;
+function setGridBelow(below) {
+  if (gridBelow === below) return;
+  gridBelow = below;
+  gridGroup.traverse(o => {
+    if (o.name === 'base') {
+      o.material.transparent = below; o.material.opacity = below ? 0.3 : 1; o.material.depthWrite = !below;
+      o.material.needsUpdate = true;
+    } else if (o.name === 'shadow') o.visible = !below;
+    else if (o.isLine) o.material.opacity = o.userData.op * (below ? 0.35 : 1);
+  });
   dirty = true;
 }
 
@@ -1325,6 +1343,7 @@ function updateCamera() {
   head.target.position.copy(view.target);
   const minor = gridGroup.getObjectByName('minor');
   if (minor) minor.visible = view.r < 420;
+  setGridBelow(camera.position.z < -0.01);
   dirty = true;
 }
 function animateView(to, ms = 380) {
