@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tecnología · Herramientas del aula</title>
+<meta name="description" content="AulaCAD 3D y Editor HTML: herramientas para las clases de Tecnología que funcionan en el Chromebook, sin cuenta y sin instalar nada.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314202c'/%3E%3Cpath d='M8 21l8 4 8-4V12l-8-4-8 4z' fill='%23ff6b1a'/%3E%3Cpath d='M8 12l8 4 8-4M16 16v9' stroke='%23fff' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<script>
+  // Dentro de Google Sites (recuadro insertado) la portada se escala con el ancho y los botones abren otra pestaña.
+  // Abierta directamente (https://jsalsal003.github.io/) es una página normal.
+  if (window.self !== window.top) document.documentElement.classList.add('embedded');
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -14,10 +21,15 @@
     --paper:#f5f1e8; --paper-2:#ece6d8; --ink:#14202c; --ink-2:#4a5866; --line:#d9d1bf;
     --blue:#1f5fd6; --blue-d:#163f8f; --blue-l:#dfe9fb; --orange:#ff6b1a; --orange-d:#d9520a;
     --code:#1e2230; --tag:#7cc4ff; --attr:#ffcb6b; --str:#a5e075; --com:#7f8aa3;
-    font-size:calc(100vw / 80);
+    font-size:clamp(12px, min(100vw / 80, 100vh / 53), 18px);
   }
+  html.embedded{font-size:calc(100vw / 80)}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  html,body{margin:0;min-height:100%}
+  .wrap{max-width:78rem;margin:0 auto}
+  html.embedded .wrap{max-width:none}
+  html:not(.embedded) body{display:flex;flex-direction:column;justify-content:center;min-height:100vh}
+  html:not(.embedded) .only-embed{display:none !important}
   body{
     font-family:"Atkinson Hyperlegible",system-ui,sans-serif;color:var(--ink);
     background-color:var(--paper);
@@ -56,7 +68,7 @@
   .art svg{position:absolute;inset:0;width:100%;height:100%}
   .cad .art{background-color:var(--blue);background-image:linear-gradient(rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.13) 1px,transparent 1px);background-size:.85rem .85rem}
   .web .art{background:var(--code)}
-  .num{position:absolute;top:.9rem;left:1rem;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:.78rem;letter-spacing:.1em;color:rgba(255,255,255,.75)}
+  .num{position:absolute;top:.9rem;left:1rem;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:.78rem;letter-spacing:.1em;color:rgba(255,255,255,.85);z-index:2;background:rgba(10,16,24,.45);padding:.2rem .5rem;border-radius:.3rem}
   .body{padding:1.3rem 1.5rem 1.4rem;display:flex;flex-direction:column;gap:.75rem;flex:1}
   h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.9rem;letter-spacing:-.02em;margin:0;line-height:1}
   h2 small{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:.8rem;letter-spacing:0;color:var(--ink-2);margin-left:.5rem;vertical-align:middle}
@@ -78,6 +90,9 @@
   .tip b{color:#ffd2b5}
   kbd{font-family:"JetBrains Mono",monospace;font-size:.8em;background:rgba(255,255,255,.14);border-radius:.3rem;padding:.05rem .4rem}
 
+  .foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1.2rem;font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--ink-2)}
+  html.embedded .foot{display:none}
+
   /* ---------- móvil ---------- */
   @media (max-width:700px){
     :root{font-size:15px}
@@ -92,6 +107,7 @@
 </style>
 </head>
 <body>
+<div class="wrap">
   <header class="hero">
     <div>
       <p class="eyebrow">Tecnología · Herramientas del aula</p>
@@ -107,7 +123,7 @@
   </header>
 
   <main class="tools">
-    <a class="card cad" href="../" target="_blank" rel="noopener">
+    <a class="card cad" href="https://jsalsal003.github.io/aulacad/">
       <div class="art" aria-hidden="true">
         <span class="num">01 · DISEÑO 3D</span>
         <svg viewBox="92 44 232 120" preserveAspectRatio="xMidYMid meet">
@@ -143,11 +159,11 @@
         <h2>AulaCAD 3D <small>.stl</small></h2>
         <p>Arrastra formas, cámbiales el tamaño con medidas exactas, haz huecos y descarga la pieza para la impresora 3D.</p>
         <div class="chips"><span>Medidas en mm</span><span>Agujeros y grupos</span><span>Alinear</span><span>Exportar STL</span></div>
-        <div class="go"><span class="btn">Abrir AulaCAD 3D <i>→</i></span><span class="note">Se abre a pantalla<br>completa en otra pestaña</span></div>
+        <div class="go"><span class="btn">Abrir AulaCAD 3D <i>→</i></span><span class="note only-embed">Se abre a pantalla<br>completa en otra pestaña</span></div>
       </div>
     </a>
 
-    <a class="card web" href="../editor-html/" target="_blank" rel="noopener">
+    <a class="card web" href="https://jsalsal003.github.io/aulacad/editor-html/">
       <div class="art" aria-hidden="true">
         <span class="num">02 · PÁGINAS WEB</span>
         <svg viewBox="24 26 356 134" preserveAspectRatio="xMidYMid meet" font-family="JetBrains Mono, monospace" font-size="11">
@@ -176,14 +192,21 @@
         <h2>Editor HTML <small>.html</small></h2>
         <p>Escribe tu página web y mira el resultado al momento. Te avisa en qué línea hay una etiqueta mal cerrada.</p>
         <div class="chips"><span>Resultado al instante</span><span>Detecta errores</span><span>Colores en el código</span><span>Descargar .html</span></div>
-        <div class="go"><span class="btn">Abrir Editor HTML <i>→</i></span><span class="note">Se abre a pantalla<br>completa en otra pestaña</span></div>
+        <div class="go"><span class="btn">Abrir Editor HTML <i>→</i></span><span class="note only-embed">Se abre a pantalla<br>completa en otra pestaña</span></div>
       </div>
     </a>
   </main>
 
   <aside class="tip">
     <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>
-    <span>Antes de cerrar, guarda tu trabajo en un archivo: <b>«Guardar archivo»</b> en AulaCAD o <b>«Descargar»</b> en el Editor (<kbd>Ctrl</kbd>+<kbd>S</kbd>), y entrégalo en Classroom. También puedes usar las herramientas desde el menú de arriba.</span>
+    <span>Antes de cerrar, guarda tu trabajo en un archivo: <b>«Guardar archivo»</b> en AulaCAD o <b>«Descargar»</b> en el Editor (<kbd>Ctrl</kbd>+<kbd>S</kbd>), y entrégalo en Classroom. <span class="only-embed">También puedes usar las herramientas desde el menú de arriba.</span></span>
   </aside>
+  <footer class="foot"><span>Tecnología · Herramientas del aula</span><span>Sin anuncios y sin cuentas. Si algo no carga, recarga la página.</span></footer>
+</div>
+<script>
+  // En el Sites, las herramientas se abren en otra pestaña (desde el recuadro no se puede cambiar de página).
+  if (document.documentElement.classList.contains("embedded"))
+    document.querySelectorAll("a.card").forEach(function (a) { a.target = "_blank"; a.rel = "noopener"; });
+</script>
 </body>
 </html>
