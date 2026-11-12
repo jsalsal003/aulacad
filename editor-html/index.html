@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Juan Salguero Salguero">
+<meta name="copyright" content="© 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0">
 <title>Editor HTML · CyR 3º ESO</title>
 <style>
   :root{
@@ -49,6 +51,9 @@
   iframe{flex:1;width:100%;border:0;background:#fff}
   footer{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:4px 12px;font-size:12px;color:var(--muted);background:var(--panel);border-top:1px solid var(--line);min-height:28px}
   #status.ok{color:var(--ok)}
+  .credit{white-space:nowrap;color:var(--muted)}
+  .credit a{color:inherit}
+  @media (max-width:1200px){ footer .hint{display:none} }
   #check{border:0;background:none;padding:2px 8px;border-radius:12px;font-size:12.5px;cursor:default}
   #check.ok{color:var(--ok)}
   #check.bad{color:var(--warn);background:var(--warn-bg);cursor:pointer;font-weight:600}
@@ -100,6 +105,7 @@
   <span id="status">Listo</span>
   <button id="check" type="button" title="Comprobación de etiquetas"></button>
   <span class="hint">Tu trabajo se guarda en este navegador, pero al terminar <b>descárgalo siempre</b> y entrégalo en Classroom.</span>
+  <span class="credit">© 2026 Juan Salguero Salguero · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener license" title="Puedes usarlo, copiarlo y adaptarlo citando al autor, sin fines comerciales y compartiendo igual">CC BY-NC-SA 4.0</a></span>
 </footer>
 <div id="toast"></div>
 
