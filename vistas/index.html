@@ -395,6 +395,9 @@
         var sol = solution(view), sg = el('g', { stroke: '#1f5bd0', 'stroke-width': 13, 'stroke-linecap': 'round', opacity: .28 }, g);
         Object.keys(sol).forEach(function (k) { var p = segPts(k, o); el('line', { x1: p[0], y1: p[1], x2: p[2], y2: p[3], 'stroke-dasharray': sol[k] === 'dashed' ? '22 18' : null }, sg); });
       }
+      // puntos de la rejilla: gris claro y por debajo de las líneas, para no confundirse con el dibujo
+      var dots = el('g', { fill: '#b3a990' }, g);
+      for (var x = 0; x <= N; x++) for (var y = 0; y <= N; y++) el('circle', { cx: o.x + x * CELL, cy: o.y + y * CELL, r: 4.5 }, dots);
       // líneas del alumno
       var mine = d[view], wrong = checked && checked[view] ? checked[view].wrongKeys : {};
       Object.keys(mine).forEach(function (k) {
@@ -402,9 +405,6 @@
         var ln = el('line', { x1: p[0], y1: p[1], x2: p[2], y2: p[3], stroke: wrong[k] ? '#d7262c' : '#14201a', 'stroke-width': dashed ? 6 : 8, 'stroke-linecap': 'round' }, g);
         if (dashed) ln.setAttribute('stroke-dasharray', '18 16');
       });
-      // puntos de la rejilla
-      var dots = el('g', { fill: '#14201a' }, g);
-      for (var x = 0; x <= N; x++) for (var y = 0; y <= N; y++) el('circle', { cx: o.x + x * CELL, cy: o.y + y * CELL, r: 5 }, dots);
       // zonas para pulsar cada tramo
       allKeys(LV.diag).forEach(function (k) { var p = segPts(k, o); el('line', { x1: p[0], y1: p[1], x2: p[2], y2: p[3], class: 'seg-hit', 'data-key': k, 'data-view': view }, g); });
       // vista previa del trazo
