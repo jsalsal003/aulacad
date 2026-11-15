@@ -83,6 +83,13 @@
   .chip.go{background:var(--yellow);box-shadow:.15rem .15rem 0 var(--ink)}
   .chip.go:active{transform:translate(.1rem,.1rem);box-shadow:none}
   .chip .k{opacity:.55;font-weight:400}
+  .chip.xr{border-color:var(--blue);color:var(--blue)}
+  .chip.xr.on{background:var(--blue);color:#fff}
+  .xlegend{position:absolute;right:.7rem;bottom:.6rem;font-family:var(--mono);font-size:.56rem;background:rgba(251,248,239,.9);border:1px solid var(--line);padding:.3rem .5rem;display:none;gap:.8rem;pointer-events:none}
+  .xlegend.show{display:flex}
+  .xlegend span{display:inline-flex;align-items:center;gap:.35rem}
+  .xlegend i{display:inline-block;width:1.5rem;border-top:3px solid var(--ink)}
+  .xlegend i.h{border-top:2.5px dashed var(--blue)}
   .sep{width:1px;align-self:stretch;background:var(--line);margin:0 .15rem}
   .sample{display:inline-block;width:1.4rem;height:0;border-top:3px solid currentColor}
   .sample.dash{border-top-style:dashed;border-top-width:2.5px}
@@ -130,15 +137,16 @@
 <main>
   <section class="panel">
     <div class="ph">
-      <h2>Pieza en perspectiva</h2>
+      <h2>Pieza</h2>
       <div class="views">
         <button class="chip" data-cam="iso" title="Volver a la perspectiva">Perspectiva</button>
         <button class="chip" data-cam="front" title="Mirar la pieza de frente">Alzado</button>
         <button class="chip" data-cam="top" title="Mirar la pieza desde arriba">Planta</button>
         <button class="chip" data-cam="side" id="camSide" title="Mirar la pieza desde el lado">Perfil izq.</button>
+        <button class="chip xr" id="xray" title="Rayos X: ver la pieza transparente con las aristas ocultas en azul discontinuo (X)">☢ Rayos X</button>
       </div>
     </div>
-    <div class="stage" id="stage"><canvas id="cv"></canvas><span class="hint">arrastra para girarla ↻</span></div>
+    <div class="stage" id="stage"><canvas id="cv"></canvas><span class="hint">arrastra para girarla ↻</span><div class="xlegend" id="xlegend"><span><i></i>vista</span><span><i class="h"></i>oculta</span></div></div>
   </section>
 
   <section class="panel sheet">
@@ -592,6 +600,10 @@
     return [x1, -up, depth];
   }
   COL.slope = '#3fae78';
+  function edgeKey(a, b) {
+    var ka = a.map(function (v) { return Math.round(v * 1000); }).join(','), kb = b.map(function (v) { return Math.round(v * 1000); }).join(',');
+    return ka < kb ? ka + '|' + kb : kb + '|' + ka;
+  }
   var AX = { x: 0, y: 1, z: 2 }, PQ = [[1, 2], [0, 2], [0, 1]];
   function colorOf(n) {
     if ((n[0] !== 0) + (n[1] !== 0) + (n[2] !== 0) > 1) return 'slope'; // cara inclinada
@@ -681,7 +693,82 @@
         g.stroke();
       });
     });
+    if (labels && xray) xrayEdges(g, c, ox, oy, scale, list);
     if (labels) arrows(g, c, ox, oy, scale);
+  }
+
+  /* ---------- rayos X: pieza transparente, aristas vistas (negro) y ocultas (azul discontinuo) ---------- */
+  var xray = false;
+  function xrayEdges(g, c, ox, oy, scale, front) {
+    // velo claro sobre la pieza ya pintada, para que parezca transparente
+    // se pinta la silueta opaca en una capa aparte y se pega semitransparente: el velo es igual en toda la pieza
+    var off = xrayEdges.off || (xrayEdges.off = document.createElement('canvas'));
+    off.width = g.canvas.width; off.height = g.canvas.height;
+    var og = off.getContext('2d'); og.fillStyle = '#fbf8ef';
+    front.forEach(function (o) {
+      og.beginPath();
+      o.f.pts.forEach(function (p, i) { var q = project(p, c); og[i ? 'lineTo' : 'moveTo'](ox + q[0] * scale, oy + q[1] * scale); });
+      og.closePath(); og.fill();
+    });
+    g.save(); g.globalAlpha = .62; g.drawImage(off, 0, 0); g.restore();
+    // caras en pantalla con su plano de profundidad (para saber qué tapa a qué)
+    var P = FACES.map(function (f) {
+      var s = f.pts.map(function (p) { var q = project(p, c); return [q[0], q[1], q[2]]; });
+      var a = s[0], b = s[1], d = s[2];
+      var ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
+      var det = ux * vy - uy * vx;
+      if (Math.abs(det) < 1e-9) return null; // cara de canto: no tapa nada
+      var A = (uz * vy - vz * uy) / det, B = (ux * vz - vx * uz) / det;
+      return { f: f, s: s, A: A, B: B, C: a[2] - A * a[0] - B * a[1] };
+    }).filter(Boolean);
+    function inPoly(x, y, s) {
+      var ins = false;
+      for (var i = 0, j = s.length - 1; i < s.length; j = i++) {
+        if ((s[i][1] > y) !== (s[j][1] > y) && x < (s[j][0] - s[i][0]) * (y - s[i][1]) / (s[j][1] - s[i][1]) + s[i][0]) ins = !ins;
+      }
+      return ins;
+    }
+    // aristas reales (sin repetir) y las caras que las comparten
+    var E = {};
+    FACES.forEach(function (f) {
+      f.pts.forEach(function (p, i) {
+        if (f.seam[i]) return;
+        var q = f.pts[(i + 1) % f.pts.length], k = edgeKey(p, q);
+        (E[k] = E[k] || { a: p, b: q, faces: [] }).faces.push(f);
+      });
+    });
+    var K = 24, wVis = Math.max(1.6, scale / 40), wHid = Math.max(1.4, scale / 55), segs = [];
+    Object.keys(E).forEach(function (k) {
+      var e = E[k], hidden = [];
+      for (var i = 0; i < K; i++) {
+        var t = (i + .5) / K, p3 = [e.a[0] + (e.b[0] - e.a[0]) * t, e.a[1] + (e.b[1] - e.a[1]) * t, e.a[2] + (e.b[2] - e.a[2]) * t];
+        var q = project(p3, c), h = false;
+        for (var j = 0; j < P.length && !h; j++) {
+          var F = P[j]; if (e.faces.indexOf(F.f) >= 0) continue;
+          if (F.A * q[0] + F.B * q[1] + F.C < q[2] - 1e-3 && inPoly(q[0], q[1], F.s)) h = true;
+        }
+        hidden.push(h);
+      }
+      // dibujar por tramos seguidos del mismo tipo
+      var A = project(e.a, c), B = project(e.b, c);
+      function at(t) { return [ox + (A[0] + (B[0] - A[0]) * t) * scale, oy + (A[1] + (B[1] - A[1]) * t) * scale]; }
+      var start = 0;
+      for (var i2 = 1; i2 <= K; i2++) {
+        if (i2 < K && hidden[i2] === hidden[start]) continue;
+        segs.push({ p0: at(start / K), p1: at(i2 / K), hid: hidden[start] });
+        start = i2;
+      }
+    });
+    // primero las ocultas y encima las vistas (si coinciden, manda la vista, como en dibujo técnico)
+    [true, false].forEach(function (hid) {
+      g.save();
+      g.lineCap = hid ? 'butt' : 'round'; g.lineWidth = hid ? wHid : wVis;
+      g.strokeStyle = hid ? '#1f5bd0' : '#14201a';
+      if (hid) g.setLineDash([scale * .11, scale * .08]);
+      g.beginPath();
+      segs.forEach(function (s) { if (s.hid === hid) { g.moveTo(s.p0[0], s.p0[1]); g.lineTo(s.p1[0], s.p1[1]); } });
+      g.stroke(); g.restore();
+    });
   }
   // flechas que indican desde dónde se mira cada vista
   function arrows(g, c, ox, oy, s) {
@@ -728,6 +815,14 @@
     requestAnimationFrame(camAnim);
   }
   document.querySelectorAll('[data-cam]').forEach(function (b) { b.onclick = function () { camTo(b.dataset.cam); }; });
+  function toggleXray() {
+    xray = !xray;
+    document.getElementById('xray').classList.toggle('on', xray);
+    document.getElementById('xlegend').classList.toggle('show', xray);
+    redraw();
+  }
+  document.getElementById('xray').onclick = toggleXray;
+  document.addEventListener('keydown', function (e) { if (e.target.tagName !== 'INPUT' && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'x') toggleXray(); });
 
   function makeThumb() {
     var c = document.createElement('canvas'); c.width = 520; c.height = 440;
