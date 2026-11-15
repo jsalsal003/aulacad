@@ -44,6 +44,12 @@
   .ex{margin-left:auto;display:flex;align-items:center;gap:.5rem}
   .ex .num{font-family:var(--display);font-weight:900;font-size:1.5rem;min-width:6.5rem;text-align:center}
   .ex .num b{color:var(--red)}
+  .levels{display:flex;border:2px solid var(--ink);border-radius:.3rem;overflow:hidden;margin-right:.6rem;box-shadow:.15rem .15rem 0 var(--ink)}
+  .lv{border:0;background:var(--paper);padding:.3rem .7rem;cursor:pointer;font-family:var(--display);font-weight:900;font-size:1.05rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2);display:flex;align-items:baseline;gap:.35rem}
+  .lv + .lv{border-left:2px solid var(--ink)}
+  .lv small{font-family:var(--mono);font-size:.55rem;font-weight:600;letter-spacing:0}
+  .lv.on{background:var(--ink);color:var(--yellow)}
+  .lv:not(.on):hover{background:var(--paper-2);color:var(--ink)}
   .dots{display:flex;gap:.25rem}
   .dots button{width:1.35rem;height:1.35rem;border:1.5px solid var(--ink);background:var(--paper);border-radius:.2rem;font-family:var(--mono);font-size:.5rem;font-weight:800;cursor:pointer;padding:0;color:var(--ink-2)}
   .dots button.done{background:var(--green);border-color:var(--green);color:#fff}
@@ -108,6 +114,10 @@
   <a class="home" href="https://jsalsal003.github.io/" title="Volver a la portada">← Taller</a>
   <div class="brand"><h1>Vistas <span>3D</span></h1><small>SISTEMA DIÉDRICO EUROPEO · UNE 1032</small></div>
   <div class="ex">
+    <div class="levels" role="group" aria-label="Nivel de dificultad">
+      <button class="lv" data-level="2" title="Piezas de 2×2×2 cubos (16 piezas)">Nivel 1 <small>2×2×2</small></button>
+      <button class="lv" data-level="3" title="Piezas de 3×3×3 cubos (10 piezas, más difíciles)">Nivel 2 <small>3×3×3</small></button>
+    </div>
     <button class="arrow" id="prev" title="Ejercicio anterior">◀</button>
     <div class="num">Pieza <b id="exn">01</b></div>
     <button class="arrow" id="next" title="Ejercicio siguiente">▶</button>
@@ -154,33 +164,53 @@
 <script>
 (function () {
   'use strict';
-  var N = 2; // piezas de 2×2×2 cubos
-
   /* ---------- piezas ----------
-     Cada pieza: capa de abajo y capa de arriba, vistas desde arriba.
-     Cada capa son dos filas: [fila de atrás, fila de delante], cada una "izq der" con 1 = cubo. */
-  var PIEZAS = [
-    ['11 11', '11 00'], ['11 11', '10 10'], ['11 11', '10 00'], ['11 11', '10 01'],
-    ['11 11', '11 10'], ['11 10', '10 00'], ['10 11', '10 10'], ['10 10', '11 00'],
-    ['00 11', '00 10'], ['01 11', '00 01'], ['11 10', '01 10'], ['11 10', '11 10'],
-    ['11 11', '00 11'], ['11 00', '11 10'], ['11 10', '01 00'], ['11 01', '10 01']
-  ];
+     Cada pieza es una lista de capas, de abajo arriba. Cada capa se ve desde arriba y tiene una fila
+     por cada profundidad, de atrás a delante, separadas por espacios; en cada fila, "1" = cubo (de izquierda a derecha). */
+  var NIVELES = {
+    // Nivel 1: piezas de 2×2×2 (16 piezas)
+    2: [
+      ['11 11', '11 00'], ['11 11', '10 10'], ['11 11', '10 00'], ['11 11', '10 01'],
+      ['11 11', '11 10'], ['11 10', '10 00'], ['10 11', '10 10'], ['10 10', '11 00'],
+      ['00 11', '00 10'], ['01 11', '00 01'], ['11 10', '01 10'], ['11 10', '11 10'],
+      ['11 11', '00 11'], ['11 00', '11 10'], ['11 10', '01 00'], ['11 01', '10 01']
+    ],
+    // Nivel 2: piezas de 3×3×3 (10 piezas, de menos a más difícil)
+    3: [
+      ['111 111 111', '111 111 000', '111 000 000'],   // 1 escalera de tres peldaños
+      ['111 111 111', '110 110 000', '100 000 000'],   // 2 escalera en esquina
+      ['111 111 111', '111 100 100', '100 100 100'],   // 3 torre en la esquina y muro
+      ['000 111 000', '010 111 010', '000 010 000'],   // 4 cruz escalonada
+      ['111 111 111', '101 101 101', '101 101 101'],   // 5 canal en U
+      ['101 101 101', '111 111 111', '000 000 000'],   // 6 puente (túnel)
+      ['111 111 111', '111 111 111', '111 101 111'],   // 7 cajeado en la cara de arriba
+      ['100 100 100', '100 100 100', '111 111 111'],   // 8 voladizo
+      ['111 111 111', '111 111 110', '111 110 100'],   // 9 esquina recortada en escalones
+      ['111 111 111', '111 001 101', '100 001 000']    // 10 pieza mixta
+    ]
+  };
+  var N = 2, PIEZAS = NIVELES[2];
   function parse(p) { // devuelve occ[x][y][z]
-    var o = [[[0, 0], [0, 0]], [[0, 0], [0, 0]]];
+    var o = [];
+    for (var x = 0; x < N; x++) { o.push([]); for (var y = 0; y < N; y++) { o[x].push([]); for (var z = 0; z < N; z++) o[x][y].push(0); } }
     p.forEach(function (capa, z) {
-      var filas = capa.split(' '); // [atrás, delante]
-      filas.forEach(function (f, i) { var y = i === 0 ? 1 : 0; for (var x = 0; x < 2; x++) o[x][y][z] = f[x] === '1' ? 1 : 0; });
+      capa.split(' ').forEach(function (f, i) { var y = N - 1 - i; for (var x = 0; x < N; x++) o[x][y][z] = f[x] === '1' ? 1 : 0; });
     });
     return o;
   }
 
-  /* ---------- estado ---------- */
+  /* ---------- estado (cada nivel guarda sus propias piezas y dibujos) ---------- */
   var KEY = 'vistas3d:v1', S;
   try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
-  S.ex = S.ex || 0; S.profile = S.profile || 'izq'; S.draw = S.draw || {}; S.done = S.done || {}; S.name = S.name || ''; S.group = S.group || '';
+  S.profile = S.profile || 'izq'; S.draw = S.draw || {}; S.done = S.done || {}; S.name = S.name || ''; S.group = S.group || '';
+  S.level = S.level === 3 ? 3 : 2; S.exBy = S.exBy || { 2: S.ex || 0, 3: 0 };
+  // datos de la primera versión (solo había 2×2×2): claves "0".."15" pasan a "2:0".."2:15"
+  [S.draw, S.done].forEach(function (m) { Object.keys(m).forEach(function (k) { if (/^\d+$/.test(k)) { m['2:' + k] = m[k]; delete m[k]; } }); });
+  S.ex = S.exBy[S.level] || 0;
+  function K(i) { return S.level + ':' + (i === undefined ? S.ex : i); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* nada */ } }
-  var occ = parse(PIEZAS[S.ex]), tool = 'solid', showSol = false, checked = null, undoStack = [];
-  function cur() { var d = S.draw[S.ex]; if (!d) d = S.draw[S.ex] = { alzado: {}, planta: {}, izq: {}, der: {} }; return d; }
+  var occ, tool = 'solid', showSol = false, checked = null, undoStack = [];
+  function cur() { var d = S.draw[K()]; if (!d) d = S.draw[K()] = { alzado: {}, planta: {}, izq: {}, der: {} }; return d; }
   function filled(x, y, z) { return x >= 0 && y >= 0 && z >= 0 && x < N && y < N && z < N && occ[x][y][z] === 1; }
 
   /* ---------- vistas correctas (calculadas) ----------
@@ -211,7 +241,7 @@
 
   /* ---------- lámina (SVG) ---------- */
   var svg = document.getElementById('sheet'), NS = 'http://www.w3.org/2000/svg';
-  var CELL = 150, G = CELL * N;
+  var G = 300, CELL = G / N; // cada vista mide siempre lo mismo; las celdas dependen del nivel
   // posición de cada recuadro: sistema europeo. Perfil izquierdo a la derecha del alzado; perfil derecho a la izquierda.
   function layout() {
     var L = { x: 200, y: 120 }, R = { x: 830, y: 120 }, BL = { x: 200, y: 580 }, BR = { x: 830, y: 580 };
@@ -288,7 +318,7 @@
     txt(bx + 10, by + 18, 'NOMBRE', 11, 600); txt(bx + 10, by + 68, 'CURSO', 11, 600); txt(bx + 260, by + 68, 'PIEZA', 11, 600); txt(bx + 10, by + 118, 'VISTAS CORRECTAS', 11, 600); txt(bx + 260, by + 118, 'SISTEMA', 11, 600);
     var nameT = txt(bx + 10, by + 43, S.name || '…', 22, 700, 'Caveat, cursive'); nameT.setAttribute('id', 'tName'); nameT.style.cursor = 'pointer';
     var groupT = txt(bx + 10, by + 93, S.group || '…', 22, 700, 'Caveat, cursive'); groupT.setAttribute('id', 'tGroup'); groupT.style.cursor = 'pointer';
-    txt(bx + 260, by + 93, String(S.ex + 1).padStart(2, '0'), 20, 800);
+    txt(bx + 260, by + 93, N + '×' + N + ' · ' + String(S.ex + 1).padStart(2, '0'), 20, 800);
     var nOk = checked ? ['alzado', 'planta', S.profile].filter(function (v) { return checked[v] && checked[v].ok; }).length : null;
     txt(bx + 10, by + 140, nOk === null ? 'sin comprobar' : nOk + ' / 3', 18, 800).setAttribute('fill', nOk === 3 ? '#1f8a4c' : '#14201a');
     txt(bx + 260, by + 140, 'EUROPEO', 14, 800);
@@ -381,16 +411,16 @@
       checked[v] = { ok: !missing && !extra, missing: missing, extra: extra, wrongKeys: wrongKeys };
       if (!checked[v].ok) all = false;
     });
-    if (all) { S.done[S.ex] = 1; save(); buildDots(); say('¡Perfecto! ✓'); } else say('Revisa lo marcado en rojo', true);
+    if (all) { S.done[K()] = 1; save(); buildDots(); say('¡Perfecto! ✓'); } else say('Revisa lo marcado en rojo', true);
     drawSheet();
   };
   document.getElementById('sol').onclick = function () { showSol = !showSol; this.classList.toggle('on', showSol); drawSheet(); };
   document.getElementById('undo').onclick = undo;
-  function undo() { if (!undoStack.length) return; S.draw[S.ex] = JSON.parse(undoStack.pop()); checked = null; save(); drawSheet(); }
+  function undo() { if (!undoStack.length) return; S.draw[K()] = JSON.parse(undoStack.pop()); checked = null; save(); drawSheet(); }
   var clearBtn = document.getElementById('clear'), clearT = null;
   clearBtn.onclick = function () {
     if (!clearBtn.classList.contains('on')) { clearBtn.classList.add('on'); clearBtn.textContent = '¿Seguro? Pulsa otra vez'; clearT = setTimeout(resetClear, 4000); return; }
-    resetClear(); snapshot(); S.draw[S.ex] = { alzado: {}, planta: {}, izq: {}, der: {} }; checked = null; save(); drawSheet();
+    resetClear(); snapshot(); S.draw[K()] = { alzado: {}, planta: {}, izq: {}, der: {} }; checked = null; save(); drawSheet();
   };
   function resetClear() { clearTimeout(clearT); clearBtn.classList.remove('on'); clearBtn.textContent = 'Borrar todo'; }
   document.getElementById('profile').onclick = function () {
@@ -420,7 +450,7 @@
       c.toBlob(function (b) {
         var a = document.createElement('a');
         var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
-        a.href = URL.createObjectURL(b); a.download = 'vistas_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
+        a.href = URL.createObjectURL(b); a.download = 'vistas_' + N + 'x' + N + '_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
         document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
       }, 'image/png');
     };
@@ -462,8 +492,10 @@
     var scale = Math.min(w, h) / (N * 2.25), ox = w / 2, oy = h / 2 + scale * .1;
     var list = FACES.map(function (f) {
       var nd = project([f.n[0] + N / 2, f.n[1] + N / 2, f.n[2] + N / 2], c)[2] - project([N / 2, N / 2, N / 2], c)[2];
-      return { f: f, nd: nd, d: project(f.c, c)[2] };
-    }).filter(function (o) { return o.nd < 1e-6; }).sort(function (a, b) { return b.d - a.d; });
+      // orden de pintado: por la profundidad del centro del CUBO (en una rejilla de cubos iguales siempre es correcto)
+      var cc = [f.c[0] - f.n[0] * .5, f.c[1] - f.n[1] * .5, f.c[2] - f.n[2] * .5];
+      return { f: f, nd: nd, d: project(cc, c)[2], df: project(f.c, c)[2] };
+    }).filter(function (o) { return o.nd < 1e-6; }).sort(function (a, b) { return (b.d - a.d) || (b.df - a.df); });
     // sombra en el suelo
     g.fillStyle = 'rgba(20,32,26,.10)'; g.beginPath();
     [[0, 0, 0], [N, 0, 0], [N, N, 0], [0, N, 0]].forEach(function (p, i) { var q = project(p, c); g[i ? 'lineTo' : 'moveTo'](ox + q[0] * scale, oy + q[1] * scale); }); g.closePath(); g.fill();
@@ -532,14 +564,14 @@
   function buildDots() {
     dotsEl.innerHTML = '';
     PIEZAS.forEach(function (_, i) {
-      var b = document.createElement('button'); b.textContent = i + 1; b.title = 'Pieza ' + (i + 1) + (S.done[i] ? ' (hecha)' : '');
-      if (S.done[i]) b.classList.add('done'); if (i === S.ex) b.classList.add('cur');
+      var b = document.createElement('button'); b.textContent = i + 1; b.title = 'Pieza ' + (i + 1) + (S.done[K(i)] ? ' (hecha)' : '');
+      if (S.done[K(i)]) b.classList.add('done'); if (i === S.ex) b.classList.add('cur');
       b.onclick = function () { go(i); }; dotsEl.appendChild(b);
     });
   }
   function go(i) {
     if (i < 0 || i >= PIEZAS.length) return;
-    S.ex = i; save(); occ = parse(PIEZAS[i]); FACES = faces(); checked = null; undoStack = []; showSol = false;
+    S.ex = i; S.exBy[S.level] = i; save(); occ = parse(PIEZAS[i]); FACES = faces(); checked = null; undoStack = []; showSol = false;
     document.getElementById('sol').classList.remove('on');
     document.getElementById('exn').textContent = String(i + 1).padStart(2, '0');
     document.getElementById('prev').disabled = i === 0; document.getElementById('next').disabled = i === PIEZAS.length - 1;
@@ -548,10 +580,20 @@
   document.getElementById('prev').onclick = function () { go(S.ex - 1); };
   document.getElementById('next').onclick = function () { go(S.ex + 1); };
 
+  /* ---------- nivel de dificultad (2×2×2 o 3×3×3) ---------- */
+  function setLevel(n) {
+    S.level = n; N = n; PIEZAS = NIVELES[n]; CELL = G / N;
+    S.ex = Math.min(S.exBy[n] || 0, PIEZAS.length - 1);
+    document.querySelectorAll('.lv').forEach(function (b) { b.classList.toggle('on', +b.dataset.level === n); b.setAttribute('aria-pressed', +b.dataset.level === n); });
+    var ask = document.getElementById('askBox'); if (ask) ask.remove();
+    go(S.ex);
+  }
+  document.querySelectorAll('.lv').forEach(function (b) { b.onclick = function () { if (+b.dataset.level !== S.level) setLevel(+b.dataset.level); }; });
+
   updateProfile();
-  go(S.ex);
+  setLevel(S.level);
   if (document.fonts) document.fonts.ready.then(function () { makeThumb(); redraw(); drawSheet(); });
-  window.Vistas = { solution: solution, go: go, get state() { return S; } }; // para pruebas
+  window.Vistas = { solution: solution, go: go, setLevel: setLevel, get state() { return S; } }; // para pruebas
 })();
 </script>
 </body>

@@ -4,7 +4,7 @@ Herramientas para las clases de Tecnología. No necesitan cuenta ni instalación
 
 - **AulaCAD 3D** — editor 3D al estilo Tinkercad que exporta STL para la impresora 3D: https://jsalsal003.github.io/aulacad/
 - **Editor HTML** — escribe páginas web y mira el resultado al momento; avisa de etiquetas mal cerradas: https://jsalsal003.github.io/aulacad/editor-html/
-- **Vistas 3D** — gira una pieza de cubos y dibuja su alzado, planta y perfil (sistema diédrico europeo); se corrige solo: https://jsalsal003.github.io/aulacad/vistas/
+- **Vistas 3D** — gira una pieza de cubos (2 niveles: 2×2×2 y 3×3×3) y dibuja su alzado, planta y perfil (sistema diédrico europeo); se corrige solo: https://jsalsal003.github.io/aulacad/vistas/
 
 Portada con las dos herramientas: https://jsalsal003.github.io/
 
