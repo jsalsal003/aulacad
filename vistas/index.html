@@ -639,6 +639,18 @@
         F.push({ k: colorOf(f.n), n: f.n, pts: f.pts, c: [cx / f.pts.length, cy / f.pts.length, cz / f.pts.length], cc: [x + .5, y + .5, z + .5] });
       });
     }
+    // Aristas: si un borde lo comparten dos caras en el mismo plano (dos cubos pegados), es solo una "junta"
+    // y se dibuja fina y clara; si no, es una arista de verdad de la pieza y se dibuja gruesa.
+    var pk = function (p) { return p.map(function (v) { return Math.round(v * 1000); }).join(','); };
+    var ek = function (a, b) { var ka = pk(a), kb = pk(b); return ka < kb ? ka + '|' + kb : kb + '|' + ka; };
+    var edges = {};
+    F.forEach(function (f) { f.pts.forEach(function (p, i) { var k = ek(p, f.pts[(i + 1) % f.pts.length]); (edges[k] = edges[k] || []).push(f); }); });
+    F.forEach(function (f) {
+      f.seam = f.pts.map(function (p, i) {
+        var list = edges[ek(p, f.pts[(i + 1) % f.pts.length])];
+        return list.length === 2 && list[0].n.join() === list[1].n.join();
+      });
+    });
     return F;
   }
   var FACES = [];
@@ -655,10 +667,19 @@
     g.fillStyle = 'rgba(20,32,26,.10)'; g.beginPath();
     [[0, 0, 0], [N, 0, 0], [N, N, 0], [0, N, 0]].forEach(function (p, i) { var q = project(p, c); g[i ? 'lineTo' : 'moveTo'](ox + q[0] * scale, oy + q[1] * scale); }); g.closePath(); g.fill();
     list.forEach(function (o) {
+      var pts = o.f.pts.map(function (p) { var q = project(p, c); return [ox + q[0] * scale, oy + q[1] * scale]; });
       g.beginPath();
-      o.f.pts.forEach(function (p, i) { var q = project(p, c); g[i ? 'lineTo' : 'moveTo'](ox + q[0] * scale, oy + q[1] * scale); });
+      pts.forEach(function (q, i) { g[i ? 'lineTo' : 'moveTo'](q[0], q[1]); });
       g.closePath(); g.fillStyle = COL[o.f.k]; g.fill();
-      g.lineJoin = 'round'; g.lineWidth = Math.max(1.5, scale / 45); g.strokeStyle = '#14201a'; g.stroke();
+      g.lineCap = 'round';
+      // primero las juntas (finas y claras), después las aristas reales (gruesas) para que queden encima
+      [true, false].forEach(function (seam) {
+        g.lineWidth = seam ? Math.max(1, scale / 160) : Math.max(1.5, scale / 45);
+        g.strokeStyle = seam ? 'rgba(20,32,26,.22)' : '#14201a';
+        g.beginPath();
+        pts.forEach(function (q, i) { if (o.f.seam[i] === seam) { var r = pts[(i + 1) % pts.length]; g.moveTo(q[0], q[1]); g.lineTo(r[0], r[1]); } });
+        g.stroke();
+      });
     });
     if (labels) arrows(g, c, ox, oy, scale);
   }
