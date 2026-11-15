@@ -502,7 +502,7 @@
   stage.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch }; stage.setPointerCapture(e.pointerId); camAnim = null; });
   stage.addEventListener('pointermove', function (e) {
     if (!drag) return;
-    cam.yaw = drag.yaw - (e.clientX - drag.x) * .01;
+    cam.yaw = drag.yaw + (e.clientX - drag.x) * .01; // arrastrar a la derecha gira la pieza hacia la derecha
     cam.pitch = Math.max(-0.2, Math.min(Math.PI / 2, drag.pitch + (e.clientY - drag.y) * .01));
     redraw();
   });
