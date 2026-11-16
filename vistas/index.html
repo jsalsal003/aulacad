@@ -618,6 +618,30 @@
     if (k === pq[0]) return s === c.a ? 'sq' : null;
     return s === c.b ? 'sq' : null;
   }
+  // forma sobre un plano de celda, en coordenadas 2D (p, q) de 0 a 1
+  function shape2D(sh) { return sh === 'sq' ? [[0, 0], [1, 0], [1, 1], [0, 1]] : [[sh.a, sh.b], [1 - sh.a, sh.b], [sh.a, 1 - sh.b]]; }
+  function area2(P) { var s = 0; for (var i = 0; i < P.length; i++) { var a = P[i], b = P[(i + 1) % P.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; }
+  // recorta un polígono convexo con un semiplano (lado izquierdo de a→b si keepLeft)
+  function clipHalf(P, a, b, keepLeft) {
+    var out = [], side = function (p) { var v = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]); return keepLeft ? v : -v; };
+    for (var i = 0; i < P.length; i++) {
+      var c = P[i], d = P[(i + 1) % P.length], sc = side(c), sd = side(d);
+      if (sc >= -1e-9) out.push(c);
+      if ((sc > 1e-9 && sd < -1e-9) || (sc < -1e-9 && sd > 1e-9)) { var t = sc / (sc - sd); out.push([c[0] + (d[0] - c[0]) * t, c[1] + (d[1] - c[1]) * t]); }
+    }
+    return out;
+  }
+  // A − B (los dos convexos): trozos convexos de A que quedan fuera de B
+  function subtractConvex(A, B) {
+    if (area2(B) < 0) B = B.slice().reverse();
+    var pieces = [], rest = A;
+    for (var i = 0; i < B.length && rest.length >= 3; i++) {
+      var a = B[i], b = B[(i + 1) % B.length], out = clipHalf(rest, a, b, false);
+      if (out.length >= 3 && Math.abs(area2(out)) > 1e-6) pieces.push(out);
+      rest = clipHalf(rest, a, b, true);
+    }
+    return pieces;
+  }
   // caras de cada celda (cubo o cuña); se quitan las que quedan tapadas por la celda vecina
   function faces() {
     var F = [];
@@ -642,13 +666,21 @@
         polys.push({ n: nS, k: -1, pts: [P3(ak, 0, pq2, C1[0], C1[1]), P3(ak, 1, pq2, C1[0], C1[1]), P3(ak, 1, pq2, C2[0], C2[1]), P3(ak, 0, pq2, C2[0], C2[1])] });
       }
       polys.forEach(function (f) {
-        if (f.k >= 0) { // ¿la tapa la celda de al lado?
+        var parts = [f.pts];
+        if (f.k >= 0) { // ¿la tapa (del todo o en parte) la celda de al lado?
           var nb = base.slice(); nb[f.k] += f.s ? 1 : -1;
           var other = shapeOn(cellAt(nb[0], nb[1], nb[2]), f.k, 1 - f.s);
           if (other === 'sq' || (other && f.shape !== 'sq' && other.a === f.shape.a && other.b === f.shape.b)) return;
+          if (other) { // tapada a medias: se queda solo la parte que da al exterior
+            var pq = PQ[f.k], mine2 = shape2D(f.shape), rest = subtractConvex(mine2, shape2D(other));
+            if (!rest.length) return;
+            parts = rest.map(function (poly) { return poly.map(function (v) { return P3(f.k, f.s, pq, v[0], v[1]); }); });
+          }
         }
-        var cx = 0, cy = 0, cz = 0; f.pts.forEach(function (p) { cx += p[0]; cy += p[1]; cz += p[2]; });
-        F.push({ k: colorOf(f.n), n: f.n, pts: f.pts, c: [cx / f.pts.length, cy / f.pts.length, cz / f.pts.length], cc: [x + .5, y + .5, z + .5] });
+        parts.forEach(function (pts) {
+          var cx = 0, cy = 0, cz = 0; pts.forEach(function (p) { cx += p[0]; cy += p[1]; cz += p[2]; });
+          F.push({ k: colorOf(f.n), n: f.n, pts: pts, c: [cx / pts.length, cy / pts.length, cz / pts.length], cc: [x + .5, y + .5, z + .5] });
+        });
       });
     }
     // Aristas: si un borde lo comparten dos caras en el mismo plano (dos cubos pegados), es solo una "junta"
@@ -865,7 +897,7 @@
   updateProfile();
   setLevel(S.level);
   if (document.fonts) document.fonts.ready.then(function () { makeThumb(); redraw(); drawSheet(); });
-  window.Vistas = { solution: solution, solutionRay: solutionRay, solutionVox: solutionVox, go: go, setLevel: setLevel, levels: LEVELS, get state() { return S; } }; // para pruebas
+  window.Vistas = { solution: solution, solutionRay: solutionRay, solutionVox: solutionVox, go: go, setLevel: setLevel, levels: LEVELS, faces: function () { return FACES; }, edgeKey: edgeKey, get state() { return S; } }; // para pruebas
 })();
 </script>
 </body>
