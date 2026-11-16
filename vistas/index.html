@@ -51,6 +51,26 @@
   .lv.on{background:var(--ink);color:var(--yellow)}
   .lv:not(.on):hover{background:var(--paper-2);color:var(--ink)}
   .dots{display:flex;gap:.25rem}
+  .lv.reto{color:var(--red)}
+  .lv.reto.on{background:var(--red);color:#fff}
+  .clock{display:flex;align-items:center;gap:.5rem;margin-right:.6rem}
+  .clock[hidden]{display:none}
+  .tl{font-family:var(--display);font-weight:900;font-size:1.7rem;color:var(--ink);background:var(--yellow);border:2px solid var(--ink);padding:0 .5rem;border-radius:.25rem;min-width:4.6rem;text-align:center}
+  .tl.low{background:var(--red);color:#fff;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:.6}}
+  body.in-reto .lv:not(.reto),body.in-reto #xray,body.in-reto #sol,body.in-reto #check,body.in-reto #profile{opacity:.35;pointer-events:none}
+  body.in-reto .panel{box-shadow:.4rem .4rem 0 rgba(215,38,44,.35)}
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(20,32,26,.45);display:flex;align-items:center;justify-content:center;padding:1rem}
+  .modal[hidden]{display:none}
+  .dlg{background:var(--paper);border:2px solid var(--ink);box-shadow:.5rem .5rem 0 var(--ink);max-width:34rem;width:100%;padding:1.2rem 1.4rem;animation:up .3s both}
+  .dlg h3{font-family:var(--display);font-weight:900;font-size:2rem;text-transform:uppercase;margin:0 0 .6rem}
+  .dlg ul{margin:0 0 1rem;padding-left:1.1rem;line-height:1.45}
+  .dlg label{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);font-size:.62rem;font-weight:600;margin:.5rem 0}
+  .dlg input{font-family:var(--body);font-size:1rem;padding:.4rem .5rem;border:2px solid var(--ink);border-radius:.2rem;background:#fff}
+  .dlg .btns{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem}
+  .dlg .err{color:var(--red);font-weight:700;min-height:1em;margin:.3rem 0 0}
+  .dlg .small{text-align:right;margin:.6rem 0 0}
+  .link{border:0;background:none;color:var(--ink-2);text-decoration:underline;cursor:pointer;font-family:var(--mono);font-size:.6rem;padding:0}
   .dots button{width:1.35rem;height:1.35rem;border:1.5px solid var(--ink);background:var(--paper);border-radius:.2rem;font-family:var(--mono);font-size:.5rem;font-weight:800;cursor:pointer;padding:0;color:var(--ink-2)}
   .dots button.done{background:var(--green);border-color:var(--green);color:#fff}
   .dots button.cur{background:var(--yellow);color:var(--ink);transform:translateY(-.12rem);box-shadow:0 .15rem 0 var(--ink)}
@@ -126,6 +146,11 @@
       <button class="lv" data-level="L1" title="Piezas de 2×2×2 cubos (16 piezas)">Nivel 1 <small>2×2×2</small></button>
       <button class="lv" data-level="L2" title="Piezas de 3×3×3 cubos (10 piezas, más difíciles)">Nivel 2 <small>3×3×3</small></button>
       <button class="lv" data-level="L3" title="Piezas de 2×2×2 con caras inclinadas: hay que dibujar líneas diagonales (5 piezas)">Nivel 3 <small>diagonales</small></button>
+      <button class="lv reto" data-level="R" title="Reto: 5 piezas nuevas en 30 minutos, sin ayudas. Al terminar se descarga un PDF para Classroom">⏱ Reto <small>30 min</small></button>
+    </div>
+    <div class="clock" id="clock" hidden>
+      <span class="tl" id="timeLeft" title="Tiempo que queda">30:00</span>
+      <button class="chip go" id="entregar" title="Terminar el reto y descargar el PDF">Entregar</button>
     </div>
     <button class="arrow" id="prev" title="Ejercicio anterior">◀</button>
     <div class="num">Pieza <b id="exn">01</b></div>
@@ -172,6 +197,39 @@
 </main>
 <div class="foot"><span>Dibuja las vistas con líneas continuas (aristas que se ven) y discontinuas (aristas ocultas). Arrastra de punto a punto o pulsa en un tramo.</span><span>© 2026 Juan Salguero Salguero · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener license">CC BY-NC-SA 4.0</a></span></div>
 
+<!-- ventanas del Reto -->
+<div class="modal" id="mReto" hidden>
+  <div class="dlg">
+    <h3>⏱ ¿Empezar el Reto?</h3>
+    <ul>
+      <li>Tendrás <b>30 minutos</b> para dibujar las vistas de <b>5 piezas nuevas</b>: 2 de cubos 2×2×2, 1 de 3×3×3 y 2 con caras inclinadas.</li>
+      <li>Durante el reto <b>no hay</b> Rayos X, ni Ver solución, ni Comprobar.</li>
+      <li>Al terminar (o al acabarse el tiempo) se descarga un <b>PDF</b> con tus 5 láminas y un código QR para el profesor. <b>Súbelo a Classroom.</b></li>
+    </ul>
+    <label>Nombre y apellidos <input id="rNombre" maxlength="60" autocomplete="name"></label>
+    <label>Curso y grupo <input id="rCurso" maxlength="30" placeholder="por ejemplo 2º ESO B"></label>
+    <p class="err" id="rErr"></p>
+    <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="rStart">Sí, empezar el reto</button></div>
+  </div>
+</div>
+<div class="modal" id="mEntregar" hidden>
+  <div class="dlg">
+    <h3>¿Entregar ya?</h3>
+    <p>Después ya no podrás cambiar tus dibujos. Te quedan <b id="eLeft"></b>.</p>
+    <div class="btns"><button class="chip" data-close>Seguir con el reto</button><button class="chip go" id="eYes">Sí, entregar</button></div>
+  </div>
+</div>
+<div class="modal" id="mFin" hidden>
+  <div class="dlg">
+    <h3 id="fTitle">¡Reto terminado!</h3>
+    <p>Descarga el PDF y <b>súbelo a Classroom</b>. Tiene una página por pieza y una última con el código QR para el profesor.</p>
+    <p class="err" id="fErr"></p>
+    <div class="btns"><button class="chip" id="fPractica">Volver a practicar</button><button class="chip go" id="fPdf">⬇ Descargar PDF</button></div>
+    <p class="small"><button class="link" id="fNuevo">Empezar otro reto</button></p>
+  </div>
+</div>
+
+<script src="nucleo.js"></script>
 <script>
 (function () {
   'use strict';
@@ -428,9 +486,10 @@
     txt(bx + 10, by + 18, 'NOMBRE', 11, 600); txt(bx + 10, by + 68, 'CURSO', 11, 600); txt(bx + 260, by + 68, 'PIEZA', 11, 600); txt(bx + 10, by + 118, 'VISTAS CORRECTAS', 11, 600); txt(bx + 260, by + 118, 'SISTEMA', 11, 600);
     var nameT = txt(bx + 10, by + 43, S.name || '…', 22, 700, 'Caveat, cursive'); nameT.setAttribute('id', 'tName'); nameT.style.cursor = 'pointer';
     var groupT = txt(bx + 10, by + 93, S.group || '…', 22, 700, 'Caveat, cursive'); groupT.setAttribute('id', 'tGroup'); groupT.style.cursor = 'pointer';
-    txt(bx + 260, by + 93, (LV.diag ? 'N3' : N + '×' + N) + ' · ' + String(S.ex + 1).padStart(2, '0'), 20, 800);
+    var enReto = S.level === 'R';
+    txt(bx + 260, by + 93, enReto ? 'RETO · ' + (S.ex + 1) + '/' + PIEZAS.length : (LV.diag ? 'N3' : N + '×' + N) + ' · ' + String(S.ex + 1).padStart(2, '0'), 20, 800);
     var nOk = checked ? ['alzado', 'planta', S.profile].filter(function (v) { return checked[v] && checked[v].ok; }).length : null;
-    txt(bx + 10, by + 140, nOk === null ? 'sin comprobar' : nOk + ' / 3', 18, 800).setAttribute('fill', nOk === 3 ? '#1f8a4c' : '#14201a');
+    txt(bx + 10, by + 140, enReto ? (retoActivo() ? 'reto en curso' : 'entregado') : nOk === null ? 'sin comprobar' : nOk + ' / 3', 18, 800).setAttribute('fill', nOk === 3 && !enReto ? '#1f8a4c' : '#14201a');
     txt(bx + 260, by + 140, 'EUROPEO', 14, 800);
     nameT.addEventListener('click', function () { ask('name', 'Tu nombre:'); });
     groupT.addEventListener('click', function () { ask('group', 'Tu curso y grupo (por ejemplo 2º ESO B):'); });
@@ -496,6 +555,7 @@
   }
   var stroke = null;
   svg.addEventListener('pointerdown', function (e) {
+    if (S.level === 'R' && !retoActivo()) return; // reto entregado: ya no se puede cambiar
     var pt = svgPoint(e), view = viewAt(pt); if (!view) return;
     e.preventDefault(); svg.setPointerCapture(e.pointerId);
     stroke = { view: view, start: nodeAt(view, pt), x: pt.x, y: pt.y, key: e.target.getAttribute && e.target.getAttribute('data-view') === view ? e.target.getAttribute('data-key') : null, moved: false };
@@ -526,7 +586,9 @@
   document.querySelectorAll('[data-tool]').forEach(function (b) { b.onclick = function () { setTool(b.dataset.tool); }; });
   var msgEl = document.getElementById('msg');
   function say(t, bad) { msgEl.textContent = t; msgEl.className = 'msg show' + (bad ? ' bad' : ''); clearTimeout(say.t); say.t = setTimeout(function () { msgEl.className = 'msg'; }, 2600); }
+  function bloqueado() { return document.body.classList.contains('in-reto'); }
   document.getElementById('check').onclick = function () {
+    if (bloqueado()) return;
     checked = {};
     var all = true;
     ['alzado', 'planta', S.profile].forEach(function (v) {
@@ -542,16 +604,18 @@
     if (all) { S.done[K()] = 1; save(); buildDots(); say('¡Perfecto! ✓'); } else say('Revisa lo marcado en rojo', true);
     drawSheet();
   };
-  document.getElementById('sol').onclick = function () { showSol = !showSol; this.classList.toggle('on', showSol); drawSheet(); };
+  document.getElementById('sol').onclick = function () { if (bloqueado()) return; showSol = !showSol; this.classList.toggle('on', showSol); drawSheet(); };
   document.getElementById('undo').onclick = undo;
-  function undo() { if (!undoStack.length) return; S.draw[K()] = JSON.parse(undoStack.pop()); checked = null; save(); drawSheet(); }
+  function undo() { if (!undoStack.length || (S.level === 'R' && !retoActivo())) return; S.draw[K()] = JSON.parse(undoStack.pop()); checked = null; save(); drawSheet(); }
   var clearBtn = document.getElementById('clear'), clearT = null;
   clearBtn.onclick = function () {
+    if (S.level === 'R' && !retoActivo()) return;
     if (!clearBtn.classList.contains('on')) { clearBtn.classList.add('on'); clearBtn.textContent = '¿Seguro? Pulsa otra vez'; clearT = setTimeout(resetClear, 4000); return; }
     resetClear(); snapshot(); S.draw[K()] = { alzado: {}, planta: {}, izq: {}, der: {} }; checked = null; save(); drawSheet();
   };
   function resetClear() { clearTimeout(clearT); clearBtn.classList.remove('on'); clearBtn.textContent = 'Borrar todo'; }
   document.getElementById('profile').onclick = function () {
+    if (bloqueado()) return;
     S.profile = S.profile === 'izq' ? 'der' : 'izq'; checked = null; save(); updateProfile(); isoFor(); makeThumb(); camTo('iso'); drawSheet();
   };
   function updateProfile() {
@@ -566,23 +630,29 @@
   });
 
   /* ---------- descargar la lámina como imagen ---------- */
+  // la lámina actual como imagen PNG (data URL); la usan «Descargar imagen» y el PDF del Reto
+  function sheetPNG(type) {
+    return new Promise(function (ok, ko) {
+      var clone = svg.cloneNode(true);
+      clone.querySelectorAll('.seg-hit,[id^="prev-"]').forEach(function (n) { n.remove(); });
+      clone.setAttribute('width', 1400); clone.setAttribute('height', 1000);
+      var img = new Image();
+      img.onload = function () {
+        var c = document.createElement('canvas'); c.width = 1400; c.height = 1000;
+        var x = c.getContext('2d'); x.fillStyle = '#fbf8ef'; x.fillRect(0, 0, 1400, 1000); x.drawImage(img, 0, 0, 1400, 1000);
+        ok(c.toDataURL(type || 'image/png', .9));
+      };
+      img.onerror = function () { ko(new Error('no se pudo dibujar la lámina')); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    });
+  }
   document.getElementById('png').onclick = function () {
-    var clone = svg.cloneNode(true);
-    clone.querySelectorAll('.seg-hit,[id^="prev-"]').forEach(function (n) { n.remove(); });
-    clone.setAttribute('width', 1400); clone.setAttribute('height', 1000);
-    var data = new XMLSerializer().serializeToString(clone);
-    var img = new Image();
-    img.onload = function () {
-      var c = document.createElement('canvas'); c.width = 1400; c.height = 1000;
-      var x = c.getContext('2d'); x.fillStyle = '#fbf8ef'; x.fillRect(0, 0, 1400, 1000); x.drawImage(img, 0, 0, 1400, 1000);
-      c.toBlob(function (b) {
-        var a = document.createElement('a');
-        var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
-        a.href = URL.createObjectURL(b); a.download = 'vistas_' + (LV.diag ? 'diagonales' : N + 'x' + N) + '_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
-        document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
-      }, 'image/png');
-    };
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+    sheetPNG().then(function (u) {
+      var a = document.createElement('a');
+      var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
+      a.href = u; a.download = 'vistas_' + (S.level === 'R' ? 'reto' : LV.diag ? 'diagonales' : N + 'x' + N) + '_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+    });
   };
 
   /* ---------- pieza en 3D (lienzo 2D con proyección ortográfica) ---------- */
@@ -848,6 +918,7 @@
   }
   document.querySelectorAll('[data-cam]').forEach(function (b) { b.onclick = function () { camTo(b.dataset.cam); }; });
   function toggleXray() {
+    if (!xray && document.body.classList.contains('in-reto')) return; // en el reto no hay rayos X
     xray = !xray;
     document.getElementById('xray').classList.toggle('on', xray);
     document.getElementById('xlegend').classList.toggle('show', xray);
@@ -874,7 +945,14 @@
   }
   function go(i) {
     if (i < 0 || i >= PIEZAS.length) return;
-    S.ex = i; S.exBy[S.level] = i; save(); occ = parse(PIEZAS[i]); FACES = faces(); checked = null; undoStack = []; showSol = false;
+    S.ex = i; S.exBy[S.level] = i; save();
+    if (S.level === 'R') { // Reto: cada pieza sale de la batería y puede ser de 2×2×2 o 3×3×3
+      var bp = VistasNucleo.BATERIA[PIEZAS[i]];
+      N = VistasNucleo.tam(bp); CELL = G / N; LV = { n: N, diag: VistasNucleo.diag(bp), pieces: PIEZAS };
+      occ = VistasNucleo.ocupacion(bp);
+      document.getElementById('diagHint').style.display = LV.diag ? '' : 'none';
+    } else occ = parse(PIEZAS[i]);
+    FACES = faces(); checked = null; undoStack = []; showSol = false;
     document.getElementById('sol').classList.remove('on');
     document.getElementById('exn').textContent = String(i + 1).padStart(2, '0');
     document.getElementById('prev').disabled = i === 0; document.getElementById('next').disabled = i === PIEZAS.length - 1;
@@ -885,17 +963,140 @@
 
   /* ---------- nivel de dificultad (2×2×2 o 3×3×3) ---------- */
   function setLevel(id) {
-    S.level = id; LV = LEVELS[id]; N = LV.n; PIEZAS = LV.pieces; CELL = G / N;
+    if (id === 'R' && !(S.reto && S.reto.piezas)) id = 'L1';
+    S.level = id;
+    if (id === 'R') { PIEZAS = S.reto.piezas; LV = { n: 2, pieces: PIEZAS }; }
+    else { LV = LEVELS[id]; N = LV.n; PIEZAS = LV.pieces; CELL = G / N; }
     S.ex = Math.min(S.exBy[id] || 0, PIEZAS.length - 1);
     document.querySelectorAll('.lv').forEach(function (b) { b.classList.toggle('on', b.dataset.level === id); b.setAttribute('aria-pressed', b.dataset.level === id); });
     var ask = document.getElementById('askBox'); if (ask) ask.remove();
     document.getElementById('diagHint').style.display = LV.diag ? '' : 'none';
+    retoUI();
     go(S.ex);
   }
-  document.querySelectorAll('.lv').forEach(function (b) { b.onclick = function () { if (b.dataset.level !== S.level) setLevel(b.dataset.level); }; });
+  document.querySelectorAll('.lv').forEach(function (b) {
+    b.onclick = function () {
+      if (b.dataset.level === 'R') { retoButton(); return; }
+      if (b.dataset.level !== S.level) setLevel(b.dataset.level);
+    };
+  });
+
+  /* ===================================================================
+     RETO: 5 piezas de la batería en 30 minutos, sin ayudas. Al final, PDF con las láminas y un QR para el profesor.
+     =================================================================== */
+  var R = VistasNucleo, MS = R.MINUTOS * 60 * 1000;
+  function retoActivo() { return !!(S.reto && S.reto.activo); }
+  function show(id, on) { document.getElementById(id).hidden = !on; }
+  document.querySelectorAll('.modal [data-close]').forEach(function (b) { b.onclick = function () { b.closest('.modal').hidden = true; }; });
+  function retoUI() {
+    // en las piezas del Reto no hay ayudas, tampoco después de entregar (así no se pasan las soluciones)
+    var en = S.level === 'R';
+    document.body.classList.toggle('in-reto', en);
+    show('clock', en && retoActivo());
+    if (en && xray) toggleXray(); // apagar (encenderlos está bloqueado en el reto)
+    if (en && showSol) { showSol = false; document.getElementById('sol').classList.remove('on'); }
+    tick();
+  }
+  function fmt(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function tick() {
+    if (!retoActivo()) return;
+    var left = S.reto.inicio + MS - Date.now();
+    var tl = document.getElementById('timeLeft'); tl.textContent = fmt(left); tl.classList.toggle('low', left < 5 * 60 * 1000);
+    if (left <= 0) finishReto(true);
+  }
+  setInterval(tick, 1000);
+  function retoButton() {
+    if (retoActivo()) { if (S.level !== 'R') setLevel('R'); return; }
+    if (S.reto && S.reto.codigo) { openFin(false); return; } // ya hay un reto terminado: volver a descargar o empezar otro
+    openStart();
+  }
+  function openStart() {
+    document.getElementById('rNombre').value = S.name || ''; document.getElementById('rCurso').value = S.group || '';
+    document.getElementById('rErr').textContent = ''; show('mFin', false); show('mReto', true);
+    setTimeout(function () { document.getElementById('rNombre').focus(); }, 50);
+  }
+  document.getElementById('rStart').onclick = function () {
+    var nom = document.getElementById('rNombre').value.trim(), cur = document.getElementById('rCurso').value.trim();
+    if (nom.length < 3) { document.getElementById('rErr').textContent = 'Escribe tu nombre y apellidos: saldrán en el PDF.'; return; }
+    S.name = nom; S.group = cur;
+    Object.keys(S.draw).forEach(function (k) { if (k.indexOf('R:') === 0) delete S.draw[k]; });
+    S.reto = { piezas: R.elegir(), inicio: Date.now(), perfil: S.profile, activo: true };
+    S.exBy.R = 0; save(); show('mReto', false);
+    setLevel('R');
+  };
+  document.getElementById('entregar').onclick = function () { document.getElementById('eLeft').textContent = fmt(S.reto.inicio + MS - Date.now()); show('mEntregar', true); };
+  document.getElementById('eYes').onclick = function () { show('mEntregar', false); finishReto(false); };
+  function retoDatos() {
+    return { inicio: S.reto.inicio, duracion: (S.reto.fin || Date.now()) - S.reto.inicio, perfil: S.reto.perfil, piezas: S.reto.piezas,
+      dibujos: S.reto.piezas.map(function (_, i) { return S.draw['R:' + i] || {}; }), nombre: S.name, curso: S.group };
+  }
+  function finishReto(auto) {
+    if (!retoActivo()) return;
+    S.reto.activo = false; S.reto.fin = Math.min(Date.now(), S.reto.inicio + MS);
+    S.reto.codigo = R.codificar(retoDatos()); save();
+    retoUI(); drawSheet(); openFin(auto);
+  }
+  function openFin(auto) {
+    document.getElementById('fTitle').textContent = auto ? '¡Se acabó el tiempo!' : '¡Reto terminado!';
+    document.getElementById('fErr').textContent = ''; show('mFin', true);
+  }
+  document.getElementById('fPractica').onclick = function () { show('mFin', false); setLevel('L1'); };
+  document.getElementById('fNuevo').onclick = function () { openStart(); };
+  document.getElementById('fPdf').onclick = function () {
+    var btn = this; btn.disabled = true; btn.textContent = 'Preparando…';
+    makePDF().then(function () { btn.disabled = false; btn.textContent = '⬇ Descargar PDF'; },
+      function (e) { btn.disabled = false; btn.textContent = '⬇ Descargar PDF'; document.getElementById('fErr').textContent = 'No se pudo crear el PDF (' + e.message + '). Comprueba la conexión a internet y vuelve a intentarlo.'; });
+  };
+
+  /* ---------- PDF: una página por pieza y otra con el QR ---------- */
+  function loadScript(src) {
+    return new Promise(function (ok, ko) {
+      if (document.querySelector('script[src="' + src + '"]')) { ok(); return; }
+      var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { ko(new Error('sin conexión')); }; document.head.appendChild(s);
+    });
+  }
+  var PROFE_URL = 'https://jsalsal003.github.io/aulacad/vistas/profe.html';
+  function makePDF() {
+    var prevLevel = S.level, prevEx = S.ex, imgs = [];
+    return Promise.all([loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'), loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')])
+      .then(function () {
+        if (S.level !== 'R') setLevel('R');
+        var chain = Promise.resolve();
+        S.reto.piezas.forEach(function (_, i) { chain = chain.then(function () { go(i); return sheetPNG('image/jpeg'); }).then(function (u) { imgs.push(u); }); });
+        return chain;
+      })
+      .then(function () {
+        var jsPDF = window.jspdf.jsPDF, doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        var d = new Date(S.reto.inicio), fecha = d.toLocaleDateString('es-ES') + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        var usado = fmt(S.reto.fin - S.reto.inicio);
+        imgs.forEach(function (u, i) {
+          if (i) doc.addPage();
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('Reto de Vistas 3D  ·  Pieza ' + (i + 1) + ' de ' + imgs.length, 14, 14);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+          doc.text(S.name + (S.group ? '  ·  ' + S.group : '') + '  ·  ' + fecha + '  ·  tiempo: ' + usado + '  ·  perfil ' + (S.reto.perfil === 'izq' ? 'izquierdo' : 'derecho'), 14, 20);
+          doc.addImage(u, 'JPEG', 23.5, 24, 250, 178.6, undefined, 'FAST');
+        });
+        // página del QR
+        doc.addPage();
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Código para el profesor', 148.5, 22, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+        doc.text(S.name + (S.group ? '  ·  ' + S.group : '') + '  ·  ' + fecha + '  ·  tiempo: ' + usado, 148.5, 30, { align: 'center' });
+        var qr = qrcode(0, 'M'); qr.addData(PROFE_URL + '#r=' + S.reto.codigo); qr.make();
+        var n = qr.getModuleCount(), size = 130, cell = size / n, x0 = 148.5 - size / 2, y0 = 40;
+        doc.setFillColor(20, 32, 26);
+        for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (qr.isDark(r, c)) doc.rect(x0 + c * cell, y0 + r * cell, cell + .05, cell + .05, 'F');
+        doc.setFontSize(9); doc.setTextColor(90);
+        doc.text('El profesor lo escanea con el corrector de Vistas 3D (con contraseña) y obtiene la nota y la corrección.', 148.5, y0 + size + 10, { align: 'center' });
+        doc.text('© 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0', 148.5, 200, { align: 'center' });
+        var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
+        doc.save('reto_vistas_' + who + '.pdf');
+      })
+      .finally(function () { if (prevLevel !== S.level) setLevel(prevLevel); go(Math.min(prevEx, PIEZAS.length - 1)); });
+  }
 
   updateProfile();
   setLevel(S.level);
+  if (retoActivo() && S.reto.inicio + MS <= Date.now()) finishReto(true); // se acabó el tiempo mientras estaba cerrado
   if (document.fonts) document.fonts.ready.then(function () { makeThumb(); redraw(); drawSheet(); });
   window.Vistas = { solution: solution, solutionRay: solutionRay, solutionVox: solutionVox, go: go, setLevel: setLevel, levels: LEVELS, faces: function () { return FACES; }, edgeKey: edgeKey, get state() { return S; } }; // para pruebas
 })();
