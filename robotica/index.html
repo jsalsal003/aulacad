@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Juan Salguero Salguero">
+<meta name="copyright" content="© 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0">
+<title>Placa virtual · Robótica</title>
+<meta name="description" content="Simulador de placa para Computación y Robótica: LED, zumbador, servo y sensores programados por bloques, sin placa real.">
+<meta name="theme-color" content="#24414b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d6b47'/%3E%3Crect x='11' y='3' width='10' height='26' rx='3' fill='%2314201a'/%3E%3Ccircle cx='16' cy='9' r='3.2' fill='%23ff4b3e'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%23ffb000'/%3E%3Ccircle cx='16' cy='23' r='3.2' fill='%232ee66b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Big+Shoulders+Stencil:wght@700;900&family=Caveat:wght@700&family=Martian+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* ===================================================================
+     PLACA VIRTUAL — simulador de actuadores y sensores (CyR 2.º ESO)
+     Estética: banco de electrónica. Alfombrilla antiestática azul pizarra,
+     placa de circuito verde con serigrafía blanca y pistas de cobre, y las
+     mismas láminas de papel, tinta y lápices del resto del taller.
+     Todo se mide en rem, que depende del ancho y del alto de la ventana:
+     en un Chromebook (1366×650 útiles) cabe entero sin desplazarse.
+     =================================================================== */
+  :root{
+    --mat:#24414b; --dot:rgba(214,233,240,.10);
+    --paper:#fbf8ef; --paper-2:#f1ecdd; --ink:#14201a; --ink-2:#55605a; --line:#cfc6ae;
+    --yellow:#ffd23f; --orange:#ff6a1f; --blue:#1f5bd0; --red:#d7262c; --green:#1f8a4c;
+    --pcb:#1d6b47;
+    --c-ev:#e6a800; --c-ct:#ffab19; --c-led:#0fbd8c; --c-bz:#9966ff; --c-sv:#4c97ff; --c-in:#5cb1d6;
+    --display:"Big Shoulders Stencil","Arial Narrow",sans-serif;
+    --body:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",system-ui,sans-serif;
+    --mono:"Martian Mono",ui-monospace,monospace;
+    --hand:"Caveat",cursive;
+    font-size:clamp(11px, min(100vw / 92, 100vh / 47), 19px);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--body);color:var(--ink);background-color:var(--mat);
+    background-image:radial-gradient(var(--dot) 1px,transparent 1.4px),radial-gradient(ellipse at 25% -10%,rgba(255,255,255,.12),transparent 60%),radial-gradient(ellipse at 100% 110%,rgba(0,0,0,.35),transparent 60%);
+    background-size:1rem 1rem,auto,auto;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  button,select,input{font:inherit}
+  button{cursor:pointer}
+  [hidden]{display:none !important}
+
+  /* ---------- barra superior ---------- */
+  .top{display:flex;align-items:center;gap:1rem;padding:.5rem 1.1rem;border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:wrap;position:relative;z-index:3}
+  .home{font-family:var(--mono);font-size:.62rem;font-weight:600;text-decoration:none;color:var(--ink-2);border:1px solid var(--line);padding:.3rem .55rem;border-radius:.2rem}
+  .home:hover{border-color:var(--ink);color:var(--ink)}
+  .brand{display:flex;align-items:baseline;gap:.7rem}
+  .brand h1{font-family:var(--display);font-weight:900;font-size:2rem;line-height:1;margin:0;letter-spacing:.02em;text-transform:uppercase}
+  .brand h1 span{color:var(--pcb)}
+  .brand small{font-family:var(--mono);font-size:.56rem;color:var(--ink-2);letter-spacing:.06em}
+  .levels{display:flex;border:2px solid var(--ink);border-radius:.3rem;overflow:hidden;box-shadow:.15rem .15rem 0 var(--ink);margin-left:auto}
+  .lv{border:0;background:var(--paper);padding:.3rem .75rem;cursor:pointer;font-family:var(--display);font-weight:900;font-size:1.05rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2);display:flex;align-items:baseline;gap:.35rem}
+  .lv + .lv{border-left:2px solid var(--ink)}
+  .lv small{font-family:var(--mono);font-size:.55rem;font-weight:600;letter-spacing:0}
+  .lv.on{background:var(--ink);color:var(--yellow)}
+  .lv:not(.on):hover{background:var(--paper-2);color:var(--ink)}
+
+  .chip{border:1.5px solid var(--ink);background:var(--paper);padding:.28rem .6rem;border-radius:.2rem;cursor:pointer;font-family:var(--mono);font-size:.6rem;font-weight:600;display:inline-flex;align-items:center;gap:.35rem;color:var(--ink);white-space:nowrap}
+  .chip:hover{background:var(--paper-2)}
+  .chip:disabled{opacity:.4;cursor:default}
+  .chip.on{background:var(--ink);color:var(--paper)}
+  .chip.go{background:var(--yellow);box-shadow:.15rem .15rem 0 var(--ink)}
+  .chip.go:active,.chip.run:active{transform:translate(.1rem,.1rem);box-shadow:none}
+  .chip.run{background:var(--green);color:#fff;border-color:var(--ink);box-shadow:.15rem .15rem 0 var(--ink);font-size:.66rem;font-weight:800}
+  body.running .chip.run:not(.stepping){animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{background:#26a85c}}
+  .chip b{font-weight:800}
+  .count{background:var(--ink);color:var(--yellow);border-radius:.2rem;padding:.05rem .35rem;font-weight:800}
+
+  /* ---------- zona de trabajo ---------- */
+  main{flex:1;min-height:0;display:grid;gap:.9rem;padding:.8rem 1.1rem .45rem;
+    grid-template-columns:minmax(0,4.3fr) minmax(0,4.5fr) minmax(0,3.6fr);
+    grid-template-rows:minmax(0,1fr) 9.6rem;
+    grid-template-areas:"board prog pal" "scope scope pal"}
+  /* en el Nivel 2 la placa es más alta (lleva los sensores): ocupa toda la columna */
+  body.L2 main{grid-template-columns:minmax(0,3.9fr) minmax(0,4.5fr) minmax(0,3.6fr);grid-template-rows:minmax(0,1fr) 10.4rem;grid-template-areas:"board prog pal" "board scope scope"}
+  body.L2 .phint{display:none}
+  .panel{background:var(--paper);border:2px solid var(--ink);box-shadow:.35rem .35rem 0 rgba(0,0,0,.35);display:flex;flex-direction:column;min-height:0;min-width:0;position:relative;
+    animation:up .55s cubic-bezier(.2,.9,.25,1.1) both}
+  .p-board{grid-area:board}
+  .p-prog{grid-area:prog;animation-delay:.08s}
+  .p-pal{grid-area:pal;animation-delay:.16s}
+  .p-scope{grid-area:scope;animation-delay:.24s}
+  @keyframes up{from{opacity:0;transform:translateY(1rem)}to{opacity:1;transform:none}}
+  .ph{display:flex;align-items:center;gap:.4rem;padding:.32rem .6rem;border-bottom:1.5px solid var(--ink);flex-wrap:wrap;min-height:2.3rem}
+  .ph.bottom{border-bottom:0;border-top:1.5px solid var(--ink)}
+  .ph h2{font-family:var(--mono);font-size:.6rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin:0 auto 0 0;white-space:nowrap}
+  .dhint{font-family:var(--hand);font-size:1.1rem;color:var(--green);line-height:1}
+  .grow{flex:1}
+
+  /* placa */
+  .boardwrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:.5rem;
+    background-image:linear-gradient(rgba(31,91,208,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(31,91,208,.06) 1px,transparent 1px);background-size:1.2rem 1.2rem}
+  #pcb{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;overflow:visible}
+  .silk{font-family:var(--mono);font-size:8px;font-weight:600;fill:#eef5e8;letter-spacing:.06em}
+  .silk.sm{font-size:7px}
+  .silk.ttl{font-size:10px;font-weight:800;letter-spacing:.14em}
+  .silk.val{font-size:10.5px;font-weight:800;fill:#ffd23f;letter-spacing:0}
+  .lcd{font-family:var(--mono);font-size:8px;fill:#7dffb0}
+  .lcd.big{font-size:17px;font-weight:800}
+  .degt{font-family:var(--mono);font-size:17px;font-weight:800;fill:#ffd23f}
+  .lamp{transition:fill .06s}
+  .glow{transition:opacity .06s}
+  #arm,#potK{transition:transform .45s cubic-bezier(.4,1.3,.5,1)}
+  #potK{transition-duration:.08s}
+  #waves{opacity:0}
+  #pcb.bzon #waves{opacity:1;animation:wv .32s ease-in-out infinite alternate}
+  @keyframes wv{from{opacity:.35}to{opacity:1}}
+  #ledL{fill:#4a2a10}
+  #pcb.run #ledL{animation:hb 1s steps(2) infinite}
+  @keyframes hb{0%{fill:#ff8a2a}50%{fill:#4a2a10}}
+  #sonar{opacity:0}
+  #pcb.run #sonar{opacity:.9;animation:son .7s linear infinite}
+  @keyframes son{to{stroke-dashoffset:-16}}
+  .ctl{cursor:pointer}
+  .drag{cursor:ew-resize}
+  .knob{cursor:grab}
+  #pcb:not(.l2) .in2{display:none}
+
+  /* programa */
+  .reto{display:flex;gap:.6rem;align-items:center;padding:.38rem .6rem;border-bottom:1.5px dashed var(--ink);background:#fff3c4}
+  .reto .no{flex:none;font-family:var(--display);font-weight:900;font-size:1.35rem;width:2.3rem;height:2.3rem;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--yellow);border-radius:.2rem}
+  .reto .no.bug{background:var(--red);color:#fff}
+  .reto .tx{flex:1;min-width:0}
+  .reto b{font-family:var(--display);font-weight:900;font-size:1.12rem;text-transform:uppercase;letter-spacing:.02em;display:block;line-height:1}
+  .reto p{margin:.15rem 0 0;font-size:.7rem;line-height:1.25;color:#3c4640}
+  .reto .acts{display:flex;flex-direction:column;gap:.25rem;align-items:stretch}
+  .reto .x{border:0;background:none;color:var(--ink-2);font-size:.9rem;align-self:flex-start;padding:0 .1rem;cursor:pointer}
+  .reto .done{font-family:var(--hand);color:var(--green);font-size:1.05rem;line-height:1;white-space:nowrap}
+
+  .progwrap{flex:1;min-height:0;overflow:auto;padding:.6rem .7rem 1.2rem;position:relative;
+    background-image:radial-gradient(rgba(20,32,26,.12) 1px,transparent 1.3px);background-size:.9rem .9rem}
+  .blk{--c:var(--c-ct);display:inline-flex;align-items:center;gap:.28rem;background:var(--c);color:#fff;font-weight:700;font-size:.78rem;line-height:1;
+    padding:.2rem .6rem;min-height:1.56rem;border-radius:.3rem;box-shadow:inset 0 -.16rem rgba(0,0,0,.2);position:relative;white-space:nowrap;text-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .blk::before{content:"";position:absolute;left:.8rem;top:0;width:1rem;height:.2rem;background:rgba(0,0,0,.16);border-radius:0 0 .2rem .2rem}
+  .c-led{--c:var(--c-led)} .c-wait,.c-if{--c:var(--c-ct)} .c-tone{--c:var(--c-bz)} .c-servo{--c:var(--c-sv)}
+  .hat{--c:var(--c-ev);border-radius:1.1rem 1.1rem .3rem .3rem;padding-top:.6rem;min-width:9.5rem}
+  .hat::before{display:none}
+  .cblk,.cif{--c:var(--c-ct);display:flex;flex-direction:column;align-items:flex-start;margin-top:2px}
+  .fhead,.ifh{border-bottom-left-radius:0}
+  .fhead{min-width:9.5rem;cursor:pointer}
+  .fhead small{font-weight:400;opacity:.8;font-size:.66rem}
+  .mouth{border-left:1rem solid var(--c);display:flex;flex-direction:column;align-items:flex-start;padding:.12rem 0 .12rem .22rem;min-width:9rem;min-height:1.5rem}
+  .mouth>.nd{margin:1px 0}
+  .mouth.caret{background:linear-gradient(90deg,rgba(255,210,63,.32),rgba(255,210,63,0) 85%)}
+  .ffoot,.cfoot{min-height:0;height:.8rem;width:7rem;padding:0;border-radius:0 .3rem .3rem .3rem}
+  .ffoot::before,.cfoot::before{display:none}
+  .elseh{border-radius:0 .3rem .3rem 0;cursor:pointer}
+  .endzone{min-height:1.05rem;min-width:8rem;display:flex;align-items:center;gap:.35rem;font-family:var(--hand);font-size:.98rem;color:var(--ink-2);padding:.05rem .35rem;border-radius:.2rem;cursor:pointer;line-height:1;white-space:nowrap}
+  .endzone:hover{background:rgba(255,210,63,.4)}
+  .endzone i{display:inline-block;width:1.8rem;height:.26rem;border-radius:.2rem;background:var(--orange);animation:caret 1s steps(2) infinite}
+  @keyframes caret{50%{opacity:.25}}
+  .blk select{appearance:none;-webkit-appearance:none;border:0;border-radius:1rem;background-color:#fff;color:#2b2f33;font-weight:700;font-size:.74rem;
+    padding:.12rem 1.15rem .12rem .5rem;cursor:pointer;text-shadow:none;
+    background-image:linear-gradient(45deg,transparent 50%,#555 50%),linear-gradient(135deg,#555 50%,transparent 50%);
+    background-position:calc(100% - .62rem) 55%,calc(100% - .42rem) 55%;background-size:.2rem .2rem;background-repeat:no-repeat}
+  .blk select:focus{outline:2px solid var(--ink)}
+  .sens{background:var(--c-in);border-radius:1rem;padding:.14rem .5rem;display:inline-flex;gap:.25rem;align-items:center;box-shadow:inset 0 -.12rem rgba(0,0,0,.15)}
+  .dot{display:inline-block;width:.72rem;height:.72rem;border-radius:50%;border:2px solid rgba(0,0,0,.35);flex:none}
+  .dot.off{background:transparent !important;border-color:rgba(255,255,255,.85)}
+  .grab{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+  .blk.cur{outline:.22rem solid var(--orange);outline-offset:.06rem;z-index:1}
+  .blk.timing::after{content:"";position:absolute;left:.35rem;right:.35rem;bottom:.1rem;height:.16rem;border-radius:.1rem;background:rgba(255,255,255,.9);transform-origin:left;animation:tbar var(--d) linear both}
+  @keyframes tbar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .pop{animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes pop{from{transform:scale(.55);opacity:0}to{transform:none;opacity:1}}
+  .ghosted{opacity:.28}
+  .ghost{position:fixed;z-index:60;pointer-events:none;opacity:.93;transform:rotate(-2deg);filter:drop-shadow(.2rem .3rem 0 rgba(0,0,0,.25));margin:0}
+  .dropline{position:fixed;z-index:59;height:.28rem;background:var(--orange);border-radius:.2rem;pointer-events:none;box-shadow:0 0 0 2px var(--paper)}
+
+  .msg{position:absolute;left:.9rem;right:.9rem;bottom:3.1rem;background:var(--paper);border:2px solid var(--green);color:var(--green);font-family:var(--hand);font-size:1.3rem;line-height:1.1;
+    padding:.4rem .75rem;transform:rotate(-.8deg) translateY(.4rem);box-shadow:.25rem .25rem 0 rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:5;cursor:pointer}
+  .msg.show{opacity:1;pointer-events:auto;transform:rotate(-.8deg)}
+  .msg.bad{border-color:var(--red);color:var(--red)}
+  .stamp{position:absolute;left:50%;top:42%;z-index:6;pointer-events:none;font-family:var(--display);font-weight:900;font-size:2.6rem;text-transform:uppercase;color:var(--green);
+    border:.3rem solid var(--green);padding:.1rem .8rem;border-radius:.4rem;background:rgba(251,248,239,.85);opacity:0;transform:translate(-50%,-50%) rotate(-10deg)}
+  .stamp.show{animation:stamp 2.2s cubic-bezier(.3,1.6,.5,1) both}
+  @keyframes stamp{0%{opacity:0;transform:translate(-50%,-50%) scale(2) rotate(-25deg)}15%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-10deg)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-10deg)}}
+
+  /* paleta */
+  .pal{flex:1;min-height:0;overflow:auto;padding:.2rem .65rem .5rem;display:flex;flex-direction:column;gap:.28rem}
+  .pal h3{font-family:var(--mono);font-size:.56rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:.4rem 0 0;display:flex;align-items:center;gap:.4rem}
+  .pal h3 i{width:.7rem;height:.7rem;border-radius:.15rem;background:var(--c)}
+  .pal h3 span{color:var(--ink-2);font-weight:600;letter-spacing:.04em;margin-left:auto}
+  .prow{display:flex;gap:.3rem;flex-wrap:wrap;align-items:center}
+  .prow .lb{font-family:var(--mono);font-size:.52rem;color:var(--ink-2);width:3.9rem;flex:none}
+  .pb{--c:var(--c-ct);border:0;border-radius:.3rem;padding:.33rem .55rem;font-weight:700;font-size:.76rem;color:#fff;background:var(--c);box-shadow:inset 0 -.16rem rgba(0,0,0,.2);
+    display:inline-flex;align-items:center;gap:.3rem;text-shadow:0 1px 0 rgba(0,0,0,.2);transition:transform .12s,filter .12s;white-space:nowrap;line-height:1.1}
+  .pb:hover{transform:translateY(-.1rem);filter:brightness(1.07)}
+  .pb:active{transform:translateY(.06rem)}
+  .pb.flash{animation:flash .35s}
+  @keyframes flash{40%{filter:brightness(1.4);transform:scale(1.08)}}
+  .pb.note{min-width:2.55rem;justify-content:center}
+  .durs{display:flex;align-items:center;gap:.25rem;font-family:var(--mono);font-size:.55rem;color:var(--ink-2)}
+  .durs button{border:1.5px solid var(--ink);background:var(--paper);border-radius:.2rem;padding:.12rem .4rem;font-family:var(--mono);font-size:.56rem;font-weight:700;color:var(--ink)}
+  .durs button.on{background:var(--c-bz);color:#fff;border-color:var(--c-bz)}
+  .pif{cursor:pointer;padding:.3rem .5rem;font-size:.74rem}
+  .pif select{appearance:none;-webkit-appearance:none;border:0;border-radius:1rem;background:#fff;color:#2b2f33;font-weight:700;font-size:.7rem;padding:.1rem .45rem;cursor:pointer;text-shadow:none}
+  .tog{display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.55rem;color:var(--ink-2);margin-top:.1rem;cursor:pointer}
+  .only2{display:none;flex-direction:column;gap:.28rem}
+  body.L2 .only2{display:flex}
+  .phint{font-family:var(--hand);font-size:1.02rem;color:var(--ink-2);padding:.3rem .65rem .4rem;border-top:1.5px dashed var(--line);line-height:1.15}
+
+  /* cronograma */
+  .scopewrap{flex:1;min-height:0;position:relative;background:#0d1714}
+  #scope{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .scope-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--hand);font-size:1.35rem;color:#8fd1a8;pointer-events:none;text-align:center;padding:0 1rem}
+  .clockv{font-family:var(--mono);font-size:.6rem;font-weight:700;color:var(--ink)}
+  .lg{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.55rem;color:var(--ink-2)}
+  .lg i{display:inline-block;width:1.4rem;border-top:3px solid var(--ink)}
+  .lg i.d{border-top:2px dashed var(--ink)}
+
+  .foot{display:flex;justify-content:space-between;gap:1rem;padding:0 1.2rem .45rem;font-family:var(--mono);font-size:.52rem;color:#b9cdd3}
+  .foot a{color:inherit}
+
+  /* ventanas */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(10,22,26,.55);display:flex;align-items:center;justify-content:center;padding:1rem}
+  .dlg{background:var(--paper);border:2px solid var(--ink);box-shadow:.5rem .5rem 0 var(--ink);max-width:36rem;width:100%;max-height:calc(100vh - 2rem);overflow:auto;padding:1.1rem 1.3rem;animation:up .3s both}
+  .dlg.wide{max-width:52rem}
+  .dlg h3{font-family:var(--display);font-weight:900;font-size:2rem;text-transform:uppercase;margin:0 0 .4rem;line-height:1}
+  .dlg h4{font-family:var(--mono);font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin:.9rem 0 .45rem;display:flex;align-items:center;gap:.5rem}
+  .dlg h4::after{content:"";flex:1;border-top:1.5px dashed var(--line)}
+  .dlg p.sub{margin:0 0 .6rem;color:var(--ink-2);font-size:.85rem}
+  .dlg ul{margin:0 0 .6rem;padding-left:1.1rem;line-height:1.45;font-size:.88rem}
+  .dlg kbd{font-family:var(--mono);font-size:.7em;border:1px solid var(--ink);border-bottom-width:2px;border-radius:.2rem;padding:0 .3rem;background:#fff}
+  .dlg .btns{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.8rem}
+  .rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+  .rc{display:flex;gap:.6rem;align-items:flex-start;text-align:left;background:#fff;border:2px solid var(--ink);padding:.45rem .6rem;box-shadow:.18rem .18rem 0 var(--ink);color:var(--ink);transition:transform .12s}
+  .rc:hover{transform:translate(-.08rem,-.08rem);box-shadow:.26rem .26rem 0 var(--ink)}
+  .rc .no{flex:none;font-family:var(--display);font-weight:900;font-size:1.25rem;width:2.1rem;height:2.1rem;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--yellow);border-radius:.2rem}
+  .rc .no.bug{background:var(--red);color:#fff}
+  .rc .tx{flex:1;min-width:0}
+  .rc b{display:block;font-family:var(--display);font-weight:900;font-size:1.12rem;text-transform:uppercase;line-height:1}
+  .rc .tx span{display:block;font-size:.72rem;color:var(--ink-2);line-height:1.25;margin-top:.15rem}
+  .rc .st{font-family:var(--hand);font-size:1.05rem;color:var(--green);white-space:nowrap}
+  .rc.ok{background:#eaf6ee;border-color:var(--green)}
+  .rc.ok .no{background:var(--green);color:#fff}
+  .rc.help .st{color:#b06000}
+  .rc.cur{outline:3px solid var(--orange);outline-offset:2px}
+  pre.ino{font-family:var(--mono);font-size:.66rem;line-height:1.55;background:#1e2230;color:#e6e9ef;padding:.8rem 1rem;border-radius:.3rem;max-height:58vh;overflow:auto;margin:0;border:2px solid var(--ink)}
+  pre.ino .cm{color:#7f8aa3;font-style:italic} pre.ino .kw{color:#c792ea} pre.ino .ct{color:#ffcb6b} pre.ino .nm{color:#f78c6c} pre.ino .fn{color:#82aaff} pre.ino .pp{color:#89ddff}
+
+  /* ---------- pantallas estrechas ---------- */
+  @media (max-width:900px){
+    :root{font-size:14px}
+    body{height:auto;overflow:auto}
+    main,body.L2 main{grid-template-columns:minmax(0,1fr);grid-template-rows:24rem 28rem auto 11rem;grid-template-areas:"board" "prog" "pal" "scope"}
+    body.L2 main{grid-template-rows:34rem 28rem auto 12rem}
+    .levels{margin-left:0}
+    .rgrid{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body class="L1">
+<header class="top">
+  <a class="home" href="https://jsalsal003.github.io/" title="Volver a la portada">← Taller</a>
+  <div class="brand"><h1>Placa <span>virtual</span></h1><small>ROBÓTICA · CyR 2.º ESO</small></div>
+  <div class="levels" role="group" aria-label="Nivel">
+    <button class="lv" data-level="L1" title="LED, zumbador y servo">Nivel 1 <small>actuadores</small></button>
+    <button class="lv" data-level="L2" title="Pulsador, luz, potenciómetro y ultrasonidos con bloques «si… entonces»">Nivel 2 <small>entradas</small></button>
+  </div>
+  <button class="chip go" id="retosBtn" title="Elegir un reto">☰ Retos <span class="count" id="retosCount">0/7</span></button>
+  <button class="chip" id="mute" title="Activar o quitar el sonido del zumbador">♪ Sonido: sí</button>
+  <button class="chip" id="helpBtn" title="Cómo se usa">?</button>
+</header>
+
+<main>
+  <section class="panel p-board">
+    <div class="ph"><h2>Placa</h2><span class="dhint" id="boardHint">así se ve tu montaje</span></div>
+    <div class="boardwrap"><svg id="pcb" viewBox="0 0 460 330" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placa con semáforo, zumbador, servo y sensores"></svg></div>
+  </section>
+
+  <section class="panel p-prog">
+    <div class="ph">
+      <h2>Programa</h2>
+      <button class="chip run" id="run" title="Ejecutar el programa (Ctrl+Intro)">▶ Ejecutar</button>
+      <button class="chip" id="stop" title="Parar (Esc)">■ Parar</button>
+      <button class="chip" id="step" title="Ejecutar bloque a bloque: cada clic, un bloque">⏭ Paso</button>
+      <button class="chip" id="fast" title="Ir más rápido">×1</button>
+    </div>
+    <div class="reto" id="retoCard" hidden></div>
+    <div class="progwrap" id="prog"></div>
+    <div class="ph bottom">
+      <button class="chip" id="undo" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+      <button class="chip" id="clear" title="Borrar todo el programa (se puede deshacer)">⌫ Borrar</button>
+      <span class="grow"></span>
+      <button class="chip" id="inoBtn" title="Ver el programa escrito en Arduino">&lt;/&gt; Arduino</button>
+      <button class="chip" id="png" title="Descargar el programa y el cronograma como imagen para Classroom">⬇ Imagen</button>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="stamp" id="stamp">¡Conseguido!</div>
+  </section>
+
+  <section class="panel p-pal">
+    <div class="ph"><h2>Bloques</h2><span class="dhint">clic para añadir</span></div>
+    <div class="pal" id="pal">
+      <h3 style="--c:var(--c-led)"><i></i>LED <span>D2 · D3 · D4</span></h3>
+      <div class="prow"><span class="lb">encender</span>
+        <button class="pb c-led" data-add='{"t":"led","v":1,"c":"rojo"}'><span class="dot" style="background:#ff4b3e"></span>rojo</button>
+        <button class="pb c-led" data-add='{"t":"led","v":1,"c":"ámbar"}'><span class="dot" style="background:#ffb000"></span>ámbar</button>
+        <button class="pb c-led" data-add='{"t":"led","v":1,"c":"verde"}'><span class="dot" style="background:#2ee66b"></span>verde</button>
+      </div>
+      <div class="prow"><span class="lb">apagar</span>
+        <button class="pb c-led" data-add='{"t":"led","v":0,"c":"rojo"}'><span class="dot off"></span>rojo</button>
+        <button class="pb c-led" data-add='{"t":"led","v":0,"c":"ámbar"}'><span class="dot off"></span>ámbar</button>
+        <button class="pb c-led" data-add='{"t":"led","v":0,"c":"verde"}'><span class="dot off"></span>verde</button>
+      </div>
+      <h3 style="--c:var(--c-ct)"><i></i>Esperar</h3>
+      <div class="prow">
+        <button class="pb c-wait" data-add='{"t":"wait","s":0.5}'>esperar 0,5 s</button>
+        <button class="pb c-wait" data-add='{"t":"wait","s":1}'>1 s</button>
+        <button class="pb c-wait" data-add='{"t":"wait","s":2}'>2 s</button>
+        <button class="pb c-wait" data-add='{"t":"wait","s":5}'>5 s</button>
+      </div>
+      <h3 style="--c:var(--c-bz)"><i></i>Zumbador <span>D8</span></h3>
+      <div class="durs" id="durs">cada nota dura
+        <button data-d="0.25">0,25</button><button data-d="0.5" class="on">0,5</button><button data-d="1">1</button> segundos
+      </div>
+      <div class="prow" id="notes"></div>
+      <h3 style="--c:var(--c-sv)"><i></i>Servo <span>D9</span></h3>
+      <div class="prow">
+        <button class="pb c-servo" data-add='{"t":"servo","a":0}'>servo a 0°</button>
+        <button class="pb c-servo" data-add='{"t":"servo","a":90}'>90°</button>
+        <button class="pb c-servo" data-add='{"t":"servo","a":180}'>180°</button>
+      </div>
+      <div class="only2">
+        <h3 style="--c:var(--c-ct)"><i></i>Si… entonces <span>entradas</span></h3>
+        <div id="pifs" style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-start"></div>
+        <label class="tog"><input type="checkbox" id="withElse" checked> añadir también «si no»</label>
+      </div>
+    </div>
+    <div class="phint">En el programa: <b>clic</b> en un bloque lo quita · <b>arrástralo</b> para moverlo · clic en una zona amarilla para elegir dónde van los nuevos.</div>
+  </section>
+
+  <section class="panel p-scope">
+    <div class="ph"><h2>Cronograma</h2><span id="scopeLeg"></span><span class="clockv" id="clockv">■ parado</span></div>
+    <div class="scopewrap"><canvas id="scope"></canvas><div class="scope-empty" id="scopeEmpty">Pulsa ▶ Ejecutar y aquí verás, segundo a segundo, cuándo se enciende cada cosa.</div></div>
+  </section>
+</main>
+<div class="foot"><span>Placa virtual: semáforo (D2 rojo, D3 ámbar, D4 verde), zumbador (D8), servo (D9) · Nivel 2: pulsador (D5), ultrasonidos (D6/D7), luz (A0), potenciómetro (A1).</span><span>© 2026 Juan Salguero Salguero · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener license">CC BY-NC-SA 4.0</a></span></div>
+
+<!-- ventanas -->
+<div class="modal" id="mRetos" hidden><div class="dlg wide">
+  <h3>Retos</h3>
+  <p class="sub">Elige un reto, haz el programa y pulsa <b>✓ Comprobar</b>: la placa compara tu cronograma con el que pide el reto.</p>
+  <div id="retoList"></div>
+  <div class="btns"><button class="chip" id="libre">Programar libre (sin reto)</button><button class="chip go" data-close>Cerrar</button></div>
+</div></div>
+
+<div class="modal" id="mIno" hidden><div class="dlg wide">
+  <h3>Código Arduino</h3>
+  <p class="sub">Así se escribe tu programa en el lenguaje de Arduino. Es lo que Bitbloq prepara por dentro antes de mandarlo a la placa.</p>
+  <pre class="ino" id="inoCode"></pre>
+  <div class="btns"><button class="chip" id="inoCopy">Copiar</button><button class="chip go" data-close>Cerrar</button></div>
+</div></div>
+
+<div class="modal" id="mHelp" hidden><div class="dlg">
+  <h3>Cómo se usa</h3>
+  <ul>
+    <li><b>Clic</b> en un bloque de la derecha lo añade al programa, dentro de «por siempre».</li>
+    <li>En el programa: <b>clic</b> en un bloque lo quita; <b>arrástralo</b> para cambiarlo de sitio. Las casillas blancas se pueden cambiar.</li>
+    <li>La <b>raya naranja</b> marca dónde se añaden los bloques nuevos. Pulsa en otra zona amarilla (dentro de un «si» o en «por siempre») para cambiarla.</li>
+    <li><b>▶ Ejecutar</b> repite el programa sin parar. <b>⏭ Paso</b> lo ejecuta bloque a bloque. <b>×3</b> va tres veces más rápido.</li>
+    <li>El <b>cronograma</b> dibuja cuándo está encendido cada LED, qué nota suena y dónde está el servo.</li>
+    <li>En el <b>Nivel 2</b>, cambia los sensores en la placa: mantén pulsado el pulsador, arrastra la luz, gira el potenciómetro o mueve el coche.</li>
+  </ul>
+  <p class="sub">Atajos: <kbd>Ctrl</kbd>+<kbd>Intro</kbd> ejecutar · <kbd>Esc</kbd> parar · <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshacer. El programa se guarda solo en este navegador; para entregarlo, <b>⬇ Imagen</b>.</p>
+  <div class="btns"><button class="chip go" data-close>Entendido</button></div>
+</div></div>
+
+<script>
+(function () {
+'use strict';
+const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+function el(t, c, h) { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; }
+const fmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
+const fmt1 = n => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/* =================== componentes =================== */
+const LEDS = {
+  'rojo':  { k: 'r', pin: 2, id: 'ledRojo',  col: '#ff4b3e', off: '#4a1714' },
+  'ámbar': { k: 'a', pin: 3, id: 'ledAmbar', col: '#ffb000', off: '#4a3608' },
+  'verde': { k: 'g', pin: 4, id: 'ledVerde', col: '#2ee66b', off: '#0f3d20' }
+};
+const KLED = { r: 'rojo', a: 'ámbar', g: 'verde' };
+const NOTES = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si', 'Do+'];
+const HZ = { 'Do': 262, 'Re': 294, 'Mi': 330, 'Fa': 349, 'Sol': 392, 'La': 440, 'Si': 494, 'Do+': 523 };
+const SENS = {
+  btn:  { ico: '●', lab: 'pulsador' },
+  luz:  { ico: '☀', lab: 'luz', unit: '%', vals: [10, 30, 50, 70, 90] },
+  dist: { ico: '⇥', lab: 'distancia', unit: 'cm', vals: [5, 10, 20, 50] },
+  pot:  { ico: '◔', lab: 'potenciómetro', unit: '%', vals: [25, 50, 75] }
+};
+const COL = { led: '#0fbd8c', wait: '#ffab19', tone: '#9966ff', servo: '#4c97ff', 'if': '#ffab19', ev: '#e6a800', ct: '#ffab19' };
+
+/* =================== bloques =================== */
+function sel(f, opts, val) {
+  const num = typeof opts[0][0] === 'number';
+  return '<select data-f="' + f + '"' + (num ? ' data-num="1"' : '') + '>' +
+    opts.map(o => '<option value="' + o[0] + '"' + (o[0] === val ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>';
+}
+function condHTML(c) {
+  const s = SENS[c.s];
+  if (c.s === 'btn') return '<span class="sens">' + s.ico + ' pulsador</span>' + sel('cond.v', [[1, 'pulsado'], [0, 'suelto']], c.v);
+  return '<span class="sens">' + s.ico + ' ' + s.lab + '</span>' + sel('cond.op', [['<', '<'], ['>', '>']], c.op) +
+    sel('cond.v', s.vals.map(v => [v, v + ' ' + s.unit]), c.v);
+}
+function condText(c) {
+  if (c.s === 'btn') return 'pulsador ' + (c.v ? 'pulsado' : 'suelto');
+  const s = SENS[c.s]; return s.lab + ' ' + c.op + ' ' + c.v + ' ' + s.unit;
+}
+function test(c, read) {
+  const v = read(c.s);
+  if (c.s === 'btn') return (v ? 1 : 0) === c.v;
+  return c.op === '<' ? v < c.v : v > c.v;
+}
+// Cada bloque: cómo se dibuja, qué texto tiene y qué hace (go es un generador:
+// produce un número cuando hay que esperar ese tiempo en segundos).
+const B = {
+  led: {
+    cls: 'c-led',
+    html: n => '<span class="dot' + (n.v ? '' : ' off') + '" style="background:' + LEDS[n.c].col + '"></span>' +
+      sel('v', [[1, 'encender'], [0, 'apagar']], n.v) + '<span>LED</span>' + sel('c', [['rojo', 'rojo'], ['ámbar', 'ámbar'], ['verde', 'verde']], n.c),
+    text: n => (n.v ? 'encender' : 'apagar') + ' LED ' + n.c,
+    go: function* (n, x) { x.set(LEDS[n.c].k, n.v ? 1 : 0); }
+  },
+  wait: {
+    cls: 'c-wait',
+    html: n => 'esperar ' + sel('s', [[0.5, '0,5'], [1, '1'], [2, '2'], [5, '5']], n.s) + ' s',
+    text: n => 'esperar ' + fmt(n.s) + ' s',
+    go: function* (n) { yield n.s; }
+  },
+  tone: {
+    cls: 'c-tone',
+    html: n => '♪ sonar zumbador ' + sel('n', NOTES.map(x => [x, x]), n.n) + ' durante ' + sel('s', [[0.25, '0,25'], [0.5, '0,5'], [1, '1']], n.s) + ' s',
+    text: n => 'sonar zumbador ' + n.n + ' durante ' + fmt(n.s) + ' s',
+    go: function* (n, x) { x.set('bz', n.n); yield n.s * 0.9; x.set('bz', null); yield n.s * 0.1; }
+  },
+  servo: {
+    cls: 'c-servo',
+    html: n => 'mover servo a ' + sel('a', [[0, '0°'], [90, '90°'], [180, '180°']], n.a),
+    text: n => 'mover servo a ' + n.a + '°',
+    go: function* (n, x) { x.set('sv', n.a); }
+  },
+  'if': {
+    cls: 'c-if',
+    html: n => 'si ' + condHTML(n.cond) + ' entonces',
+    text: n => 'si ' + condText(n.cond) + ' entonces',
+    go: function* (n, x) {
+      if (test(n.cond, x.read)) yield* run(n.then, x);
+      else if (n.else) yield* run(n.else, x);
+    }
+  }
+};
+function* run(list, x) {
+  for (const n of list.slice()) { yield { n: n }; yield* B[n.t].go(n, x); }
+}
+
+const On = c => ({ t: 'led', v: 1, c }), Off = c => ({ t: 'led', v: 0, c }), W = s => ({ t: 'wait', s }),
+      T = (n, s) => ({ t: 'tone', n, s }), V = a => ({ t: 'servo', a }),
+      IF = (s, op, v, th, els) => ({ t: 'if', cond: { s, op, v }, then: th, else: els || null });
+
+/* =================== retos =================== */
+const RETOS = {
+  L1: [
+    { id: 'semaforo', tit: 'Semáforo', txt: 'Rojo 5 s, verde 5 s y ámbar 2 s, y vuelta a empezar. Solo puede haber una luz encendida.', T: 24,
+      sol: [On('rojo'), W(5), Off('rojo'), On('verde'), W(5), Off('verde'), On('ámbar'), W(2), Off('ámbar')] },
+    { id: 'parpadeo', tit: 'LED que parpadea', txt: 'El LED rojo se enciende 1 s y se apaga 1 s, sin parar.', T: 6,
+      sol: [On('rojo'), W(1), Off('rojo'), W(1)] },
+    { id: 'dosled', tit: 'Dos LED a la vez', txt: 'El rojo y el verde se encienden juntos 1 s y se apagan juntos 1 s.', T: 6,
+      sol: [On('rojo'), On('verde'), W(1), Off('rojo'), Off('verde'), W(1)] },
+    { id: 'melodia', tit: 'Melodía', txt: '«Estrellita»: Do Do Sol Sol La La (0,5 s) y Sol (1 s); Fa Fa Mi Mi Re Re (0,5 s) y Do (1 s). Después espera 1 s.', T: 18,
+      sol: [T('Do', .5), T('Do', .5), T('Sol', .5), T('Sol', .5), T('La', .5), T('La', .5), T('Sol', 1), T('Fa', .5), T('Fa', .5), T('Mi', .5), T('Mi', .5), T('Re', .5), T('Re', .5), T('Do', 1), W(1)] },
+    { id: 'alarma', tit: 'Alarma', txt: 'El zumbador toca La y Mi de 0,25 s, una detrás de otra, sin parar.', T: 3,
+      sol: [T('La', .25), T('Mi', .25)] },
+    { id: 'parking', tit: 'Barrera de parking', txt: 'La barrera sube a 90°, espera 2 s, baja a 0° y espera 2 s.', T: 10,
+      sol: [V(90), W(2), V(0), W(2)] },
+    { id: 'limpia', tit: 'Limpiaparabrisas', txt: 'El servo va a 0°, espera 1 s, va a 180° y espera 1 s.', T: 6,
+      sol: [V(0), W(1), V(180), W(1)] }
+  ],
+  B1: [
+    { id: 'f-parpadeo', target: 'parpadeo', tit: 'El LED no parpadea', txt: 'Tendría que parpadear, pero el rojo parece siempre encendido. ¿Qué bloque falta?',
+      prog: [On('rojo'), W(1), Off('rojo')] },
+    { id: 'f-loco', target: 'semaforo', tit: 'Semáforo loco', txt: 'Al final se quedan las tres luces encendidas. Arréglalo.',
+      prog: [On('rojo'), W(5), On('verde'), W(5), On('ámbar'), W(2)] },
+    { id: 'f-verde', target: 'semaforo', tit: '¿Y el verde?', txt: 'El verde no se llega a ver nunca. ¿Por qué? Mira el cronograma.',
+      prog: [On('rojo'), W(5), Off('rojo'), On('verde'), Off('verde'), On('ámbar'), W(2), Off('ámbar')] },
+    { id: 'f-orden', target: 'semaforo', tit: 'Orden cambiado', txt: 'Después del rojo se enciende el ámbar. En un semáforo de verdad, ¿qué va después del rojo?',
+      prog: [On('rojo'), W(5), Off('rojo'), On('ámbar'), W(2), Off('ámbar'), On('verde'), W(5), Off('verde')] }
+  ],
+  L2: [
+    { id: 'timbre', tit: 'Timbre', txt: 'Mientras el pulsador esté pulsado, el zumbador toca Do de 0,25 s. Si no, silencio.', T: 11, scen: 'btn',
+      sol: [IF('btn', '=', 1, [T('Do', .25)])] },
+    { id: 'luzboton', tit: 'Luz con pulsador', txt: 'Si el pulsador está pulsado, se enciende el LED verde; si no, se apaga.', T: 11, scen: 'btn',
+      sol: [IF('btn', '=', 1, [On('verde')], [Off('verde')])] },
+    { id: 'farola', tit: 'Farola automática', txt: 'Si hay poca luz (menos del 30 %), se enciende el LED ámbar; si no, se apaga.', T: 10, scen: 'luz',
+      sol: [IF('luz', '<', 30, [On('ámbar')], [Off('ámbar')])] },
+    { id: 'aparca', tit: 'Sensor de aparcamiento', txt: 'Si hay algo a menos de 20 cm, se enciende el rojo y suena La de 0,25 s; si no, el rojo se apaga.', T: 10, scen: 'dist',
+      sol: [IF('dist', '<', 20, [On('rojo'), T('La', .25)], [Off('rojo')])] },
+    { id: 'barrera', tit: 'Barrera automática', txt: 'Si llega un coche (a menos de 20 cm), la barrera sube a 90° y espera 2 s; si no, baja a 0°.', T: 10, scen: 'dist',
+      sol: [IF('dist', '<', 20, [V(90), W(2)], [V(0)])] },
+    { id: 'giro', tit: 'Interruptor giratorio', txt: 'Si el potenciómetro pasa del 50 %, verde encendido y rojo apagado; si no, rojo encendido y verde apagado.', T: 10, scen: 'pot',
+      sol: [IF('pot', '>', 50, [On('verde'), Off('rojo')], [On('rojo'), Off('verde')])] }
+  ],
+  B2: [
+    { id: 'f-farola', target: 'farola', tit: 'La farola no se apaga', txt: 'Cuando se hace de día, la farola sigue encendida. ¿Qué le falta al «si»?',
+      prog: [IF('luz', '<', 30, [On('ámbar')])] },
+    { id: 'f-timbre', target: 'timbre', tit: 'Timbre al revés', txt: 'Suena justo cuando NO se pulsa. Arréglalo cambiando una sola casilla.',
+      prog: [IF('btn', '=', 0, [T('Do', .25)])] }
+  ]
+};
+const ALLRETOS = [].concat(RETOS.L1, RETOS.B1, RETOS.L2, RETOS.B2);
+const getReto = id => ALLRETOS.find(r => r.id === id) || null;
+// Cómo se mueven los sensores durante la comprobación de cada reto del Nivel 2
+function steps(list) { return t => { let v = list[0][1]; for (const p of list) if (t >= p[0]) v = p[1]; return v; }; }
+const sLuz = steps([[0, 80], [3, 20], [6, 50], [8, 10]]), sDist = steps([[0, 80], [2, 15], [5, 40], [7, 8]]), sPot = steps([[0, 20], [3, 80], [6, 40], [8, 90]]);
+const SCEN = {
+  btn:  t => ({ btn: ((t >= 1 && t < 3) || (t >= 5 && t < 5.6) || (t >= 7 && t < 9.5)) ? 1 : 0, luz: 60, dist: 80, pot: 50 }),
+  luz:  t => ({ btn: 0, luz: sLuz(t), dist: 80, pot: 50 }),
+  dist: t => ({ btn: 0, luz: 60, dist: sDist(t), pot: 50 }),
+  pot:  t => ({ btn: 0, luz: 60, dist: 80, pot: sPot(t) })
+};
+
+/* =================== estado guardado =================== */
+const KEY = 'placa-virtual-v1';
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
+if (S.level !== 'L2') S.level = 'L1';
+S.prog = S.prog || {}; S.reto = S.reto || {}; S.done = S.done || {}; S.help = S.help || {};
+if (!('L1' in S.reto)) S.reto.L1 = 'semaforo';
+if (!('L2' in S.reto)) S.reto.L2 = 'timbre';
+function clean(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(n => n && B[n.t]).map(n => {
+    if (n.t === 'if') {
+      if (!n.cond || !SENS[n.cond.s]) n.cond = { s: 'btn', op: '=', v: 1 };
+      n.then = clean(n.then); n.else = n.else ? clean(n.else) : null;
+    }
+    return n;
+  });
+}
+S.prog.L1 = clean(S.prog.L1); S.prog.L2 = clean(S.prog.L2);
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* sin almacenamiento: no pasa nada */ } }
+const prog = () => S.prog[S.level];
+const HIST = { L1: [], L2: [] };
+const hist = () => HIST[S.level];
+
+/* =================== placa (SVG) =================== */
+const svg = $('#pcb');
+function boardSVG() {
+  let s = '<defs><filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="9"/></filter>' +
+    '<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="rgba(255,255,255,.035)"/></pattern>' +
+    '<pattern id="stripes" width="24" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#e8262c"/><rect x="12" width="12" height="12" fill="#fbf8ef"/></pattern>' +
+    '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>';
+  s += '<rect id="pcbR" x="4" y="4" width="452" height="322" rx="16" fill="#1d6b47" stroke="#0e3d27" stroke-width="3"/>';
+  s += '<rect id="pcbH" x="4" y="4" width="452" height="322" rx="16" fill="url(#hatch)"/>';
+  s += '<g id="holes"></g>';
+  s += '<text x="28" y="22" class="silk ttl">PLACA VIRTUAL</text><text x="28" y="33" class="silk sm">rev. 2026 · CyR</text>';
+  // pistas de cobre
+  s += '<g fill="none" stroke="#d9a441" stroke-opacity=".55" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">' +
+    '<path d="M190 38V52H112V92H102"/><path d="M214 38V60H120V162H102"/><path d="M238 38V68H128V232H102"/>' +
+    '<path d="M286 38V80H180V90"/><path d="M310 38V46H442V300H340"/></g>';
+  // conector
+  [['D2', 190], ['D3', 214], ['D4', 238], ['D8', 286], ['D9', 310], ['GND', 380], ['5V', 404]].forEach(p => {
+    s += '<rect x="' + (p[1] - 7) + '" y="25" width="14" height="14" rx="2" fill="#14201a"/><circle cx="' + p[1] + '" cy="32" r="3.4" fill="#d9a441"/>' +
+      '<text x="' + p[1] + '" y="20" class="silk sm" text-anchor="middle">' + p[0] + '</text>';
+  });
+  // semáforo
+  s += '<rect x="28" y="48" width="72" height="244" rx="16" fill="#121615" stroke="#000" stroke-width="2"/>';
+  [['rojo', 92, 'D2'], ['ámbar', 162, 'D3'], ['verde', 232, 'D4']].forEach(L => {
+    const d = LEDS[L[0]];
+    s += '<circle class="glow" data-c="' + L[0] + '" cx="64" cy="' + L[1] + '" r="30" fill="' + d.col + '" filter="url(#glow)" opacity="0"/>' +
+      '<circle class="lamp" data-c="' + L[0] + '" cx="64" cy="' + L[1] + '" r="25" fill="' + d.off + '" stroke="#000" stroke-width="2"/>' +
+      '<circle cx="56" cy="' + (L[1] - 9) + '" r="6" fill="#fff" opacity=".13"/>' +
+      '<path d="M37 ' + (L[1] - 12) + 'A28 28 0 0 1 91 ' + (L[1] - 12) + '" fill="none" stroke="#000" stroke-width="5"/>' +
+      '<text x="64" y="' + (L[1] + 38) + '" class="silk sm" text-anchor="middle">' + L[2] + '</text>';
+  });
+  // zumbador
+  s += '<circle cx="180" cy="118" r="28" fill="#111" stroke="#2c2c2c" stroke-width="4"/><circle cx="180" cy="118" r="17" fill="none" stroke="#2a2a2a" stroke-width="1.5"/>' +
+    '<circle cx="180" cy="118" r="5" fill="#000"/><text x="160" y="96" class="silk">+</text>' +
+    '<g id="waves" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round"><path d="M214 108q6 10 0 20"/><path d="M222 101q11 17 0 34"/><path d="M230 94q16 24 0 48"/></g>' +
+    '<rect x="242" y="94" width="92" height="50" rx="5" fill="#0c2418" stroke="#000" stroke-width="2"/>' +
+    '<text id="lcdN" x="252" y="122" class="lcd big">—</text><text id="lcdH" x="252" y="137" class="lcd">en silencio</text>' +
+    '<text x="180" y="163" class="silk sm" text-anchor="middle">ZUMBADOR · D8</text>';
+  // servo con barrera
+  s += '<path d="M170 292A130 130 0 0 1 430 292" fill="none" stroke="#eef5e8" stroke-opacity=".45" stroke-width="1.5" stroke-dasharray="2 4"/>';
+  [0, 45, 90, 135, 180].forEach(a => {
+    const r = a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+    s += '<path d="M' + (300 + 124 * c).toFixed(1) + ' ' + (292 - 124 * sn).toFixed(1) + 'L' + (300 + 136 * c).toFixed(1) + ' ' + (292 - 136 * sn).toFixed(1) + '" stroke="#eef5e8" stroke-opacity=".7" stroke-width="1.5"/>';
+  });
+  s += '<text x="441" y="296" class="silk sm" text-anchor="middle">0°</text><text x="300" y="153" class="silk sm" text-anchor="middle">90°</text><text x="159" y="296" class="silk sm" text-anchor="middle">180°</text>';
+  s += '<rect x="262" y="290" width="76" height="7" rx="2" fill="#2f6fe0" stroke="#14201a" stroke-width="1.5"/><rect x="270" y="280" width="60" height="38" rx="4" fill="#2f6fe0" stroke="#14201a" stroke-width="2"/>';
+  s += '<g id="arm" style="transform-origin:300px 292px"><rect x="296" y="286" width="126" height="12" rx="6" fill="url(#stripes)" stroke="#14201a" stroke-width="1.5"/></g>';
+  s += '<circle cx="300" cy="292" r="11" fill="#fbf8ef" stroke="#14201a" stroke-width="2"/><circle cx="300" cy="292" r="3" fill="#14201a"/>';
+  s += '<text id="svDeg" x="344" y="318" class="degt">0°</text><text x="256" y="315" class="silk sm" text-anchor="end">SERVO · D9</text>';
+  s += '<circle cx="146" cy="16" r="3.5" fill="#46ff7a"/><text x="153" y="19" class="silk sm">ON</text><circle id="ledL" cx="146" cy="29" r="3.5"/><text x="153" y="32" class="silk sm">L</text>';
+  // ----- entradas (Nivel 2) -----
+  s += '<g class="in2">' +
+    '<path d="M18 340H442" stroke="#eef5e8" stroke-opacity=".45" stroke-dasharray="6 5"/><rect x="160" y="333" width="140" height="14" fill="#1d6b47"/>' +
+    '<text x="230" y="343.5" class="silk" text-anchor="middle">ENTRADAS · SENSORES</text>';
+  // pulsador
+  s += '<g id="btnG" class="ctl">' +
+    '<rect x="40" y="372" width="10" height="6" fill="#9aa3a0"/><rect x="40" y="414" width="10" height="6" fill="#9aa3a0"/><rect x="110" y="372" width="10" height="6" fill="#9aa3a0"/><rect x="110" y="414" width="10" height="6" fill="#9aa3a0"/>' +
+    '<rect x="48" y="364" width="64" height="64" rx="6" fill="#2a2e2c" stroke="#000" stroke-width="2"/><circle cx="80" cy="396" r="23" fill="#14201a"/>' +
+    '<circle id="btnCap" cx="80" cy="394" r="19" fill="#ffd23f" stroke="#14201a" stroke-width="2"/></g>' +
+    '<text x="80" y="447" class="silk sm" text-anchor="middle">PULSADOR · D5</text><text id="btnV" x="80" y="462" class="silk val" text-anchor="middle">suelto</text>';
+  // sensor de luz
+  s += '<circle cx="194" cy="388" r="17" fill="#c8553d" stroke="#14201a" stroke-width="2"/><path d="M182 386h5v6h5v-8h5v8h5v-6h5" fill="none" stroke="#fbe7c6" stroke-width="1.8"/>' +
+    '<rect id="skyR" x="222" y="366" width="70" height="44" rx="5" fill="#9fd8ff" stroke="#14201a" stroke-width="2"/><rect x="222" y="366" width="70" height="44" rx="5" fill="url(#sky)"/>' +
+    '<circle id="sun" cx="244" cy="384" r="9" fill="#ffd23f"/><path id="moon" d="M272 378a9 9 0 1 0 8 13a7 7 0 1 1-8-13z" fill="#f4f1d0"/>' +
+    '<g id="ldrG" class="drag"><rect x="160" y="416" width="140" height="24" fill="transparent"/>' +
+    '<line x1="170" y1="428" x2="290" y2="428" stroke="#0e3d27" stroke-width="6" stroke-linecap="round"/><line id="ldrF" x1="170" y1="428" x2="242" y2="428" stroke="#ffd23f" stroke-width="6" stroke-linecap="round"/>' +
+    '<circle id="ldrK" cx="242" cy="428" r="8" fill="#fbf8ef" stroke="#14201a" stroke-width="2"/></g>' +
+    '<text x="230" y="447" class="silk sm" text-anchor="middle">LUZ · A0</text><text id="ldrV" x="230" y="462" class="silk val" text-anchor="middle">60 %</text>';
+  // potenciómetro
+  s += '<g id="potG" class="knob"><rect x="348" y="362" width="60" height="60" rx="6" fill="#2f6fe0" stroke="#14201a" stroke-width="2"/>';
+  for (let i = 0; i <= 10; i++) {
+    const a = (-135 + i * 27) * Math.PI / 180, x1 = 378 + 24 * Math.sin(a), y1 = 392 - 24 * Math.cos(a), x2 = 378 + 28 * Math.sin(a), y2 = 392 - 28 * Math.cos(a);
+    s += '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + 'L' + x2.toFixed(1) + ' ' + y2.toFixed(1) + '" stroke="#eef5e8" stroke-width="1.4"/>';
+  }
+  s += '<g id="potK" style="transform-origin:378px 392px"><circle cx="378" cy="392" r="19" fill="#d9dde0" stroke="#14201a" stroke-width="2"/><rect x="376" y="375" width="4" height="13" rx="2" fill="#14201a"/></g></g>' +
+    '<text x="378" y="447" class="silk sm" text-anchor="middle">POTENCIÓMETRO · A1</text><text id="potV" x="378" y="462" class="silk val" text-anchor="middle">50 %</text>';
+  // ultrasonidos
+  s += '<rect x="16" y="482" width="84" height="44" rx="4" fill="#1f5bd0" stroke="#14201a" stroke-width="2"/>' +
+    '<circle cx="38" cy="504" r="15" fill="#c9cdd1" stroke="#14201a" stroke-width="2"/><circle cx="38" cy="504" r="8" fill="#5b6166"/>' +
+    '<circle cx="78" cy="504" r="15" fill="#c9cdd1" stroke="#14201a" stroke-width="2"/><circle cx="78" cy="504" r="8" fill="#5b6166"/>' +
+    '<text x="58" y="541" class="silk sm" text-anchor="middle">ULTRASONIDOS · D6/D7</text>' +
+    '<line id="sonar" x1="104" y1="504" x2="300" y2="504" stroke="#ffd23f" stroke-width="2" stroke-dasharray="4 4"/>' +
+    '<line x1="116" y1="530" x2="440" y2="530" stroke="#eef5e8" stroke-opacity=".6" stroke-width="1.5"/>';
+  for (let cm = 0; cm <= 100; cm += 10) {
+    const x = 116 + cm * 3.24;
+    s += '<path d="M' + x + ' 530v' + (cm % 20 ? 4 : 7) + '" stroke="#eef5e8" stroke-opacity=".7" stroke-width="1.2"/>' + (cm % 20 ? '' : '<text x="' + x + '" y="546" class="silk sm" text-anchor="middle">' + cm + '</text>');
+  }
+  s += '<g id="distG" class="drag"><rect x="106" y="474" width="346" height="54" fill="transparent"/>' +
+    '<g id="objG"><rect x="-17" y="-12" width="34" height="20" rx="4" fill="#ff6a1f" stroke="#14201a" stroke-width="2"/><path d="M-11 -12l4-9h14l4 9" fill="#ffb38a" stroke="#14201a" stroke-width="2"/>' +
+    '<circle cx="-9" cy="9" r="4.5" fill="#14201a"/><circle cx="9" cy="9" r="4.5" fill="#14201a"/>' +
+    '<text id="distV" x="0" y="-27" class="silk val" text-anchor="middle">80 cm</text></g></g>';
+  s += '</g>';
+  return s;
+}
+svg.innerHTML = boardSVG();
+function layoutBoard() {
+  const h = S.level === 'L2' ? 552 : 322;
+  svg.setAttribute('viewBox', '0 0 460 ' + (h + 8));
+  $('#pcbR').setAttribute('height', h); $('#pcbH').setAttribute('height', h);
+  svg.classList.toggle('l2', S.level === 'L2');
+  $('#holes').innerHTML = [[16, 16], [444, 16], [16, h - 8], [444, h - 8]].map(p =>
+    '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="#0e3d27" stroke="#d9a441" stroke-width="2.5"/>').join('');
+  $('#boardHint').textContent = S.level === 'L2' ? 'cambia los sensores con el ratón' : 'así se ve tu montaje';
+}
+
+/* ----- salidas ----- */
+const OUT = { r: 0, a: 0, g: 0, bz: null, sv: 0 };
+const IN = { btn: 0, luz: 60, dist: 80, pot: 50 };
+function paintOut(k) {
+  if (k === 'r' || k === 'a' || k === 'g') {
+    const c = KLED[k];
+    svg.querySelector('.lamp[data-c="' + c + '"]').style.fill = OUT[k] ? LEDS[c].col : LEDS[c].off;
+    svg.querySelector('.glow[data-c="' + c + '"]').style.opacity = OUT[k] ? .95 : 0;
+  } else if (k === 'bz') {
+    const n = OUT.bz;
+    svg.classList.toggle('bzon', !!n);
+    $('#lcdN').textContent = n ? '♪ ' + n : '—';
+    $('#lcdH').textContent = n ? HZ[n] + ' Hz' : 'en silencio';
+    if (n) toneOn(n); else toneOff();
+  } else if (k === 'sv') {
+    $('#arm').style.transform = 'rotate(' + (-OUT.sv) + 'deg)';
+    $('#svDeg').textContent = OUT.sv + '°';
+  }
+}
+function resetOut() { OUT.r = OUT.a = OUT.g = 0; OUT.bz = null; OUT.sv = 0; ['r', 'a', 'g', 'bz', 'sv'].forEach(paintOut); }
+
+/* ----- entradas ----- */
+function mix(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+  const A = p(a), Bc = p(b);
+  return 'rgb(' + A.map((v, i) => Math.round(v + (Bc[i] - v) * t)).join(',') + ')';
+}
+function paintIn() {
+  const cap = $('#btnCap');
+  cap.setAttribute('cy', IN.btn ? 397 : 394); cap.setAttribute('r', IN.btn ? 17.5 : 19); cap.setAttribute('fill', IN.btn ? '#e09a00' : '#ffd23f');
+  $('#btnV').textContent = IN.btn ? 'PULSADO' : 'suelto';
+  const lx = 170 + IN.luz * 1.2;
+  $('#ldrK').setAttribute('cx', lx); $('#ldrF').setAttribute('x2', lx);
+  $('#skyR').setAttribute('fill', mix('#0b1a3a', '#9fd8ff', IN.luz / 100));
+  $('#sun').setAttribute('opacity', (IN.luz / 100).toFixed(2)); $('#moon').setAttribute('opacity', (1 - IN.luz / 100).toFixed(2));
+  $('#ldrV').textContent = IN.luz + ' %';
+  $('#potK').style.transform = 'rotate(' + (-135 + IN.pot * 2.7) + 'deg)';
+  $('#potV').textContent = IN.pot + ' %';
+  const ox = 116 + IN.dist * 3.24;
+  $('#objG').setAttribute('transform', 'translate(' + ox + ' 506)');
+  $('#distV').textContent = IN.dist + ' cm';
+  $('#sonar').setAttribute('x2', ox - 20);
+}
+function setIn(k, v) { if (IN[k] === v) return; IN[k] = v; paintIn(); if (R.on) TR.push(nowVT(), k, v); }
+function svgPt(e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+function dragger(g, fn) {
+  g.addEventListener('pointerdown', e => {
+    e.preventDefault(); g.setPointerCapture(e.pointerId); fn(svgPt(e));
+    const mv = ev => fn(svgPt(ev)), up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); };
+    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+  });
+}
+dragger($('#ldrG'), p => setIn('luz', Math.round(clamp((p.x - 170) / 120, 0, 1) * 100)));
+dragger($('#distG'), p => setIn('dist', Math.round(clamp((p.x - 116) / 3.24, 2, 100))));
+dragger($('#potG'), p => {
+  let a = Math.atan2(p.x - 378, -(p.y - 392)) * 180 / Math.PI;
+  setIn('pot', Math.round((clamp(a, -135, 135) + 135) / 270 * 100));
+});
+(function () {
+  const g = $('#btnG');
+  g.addEventListener('pointerdown', e => { e.preventDefault(); g.setPointerCapture(e.pointerId); setIn('btn', 1); });
+  const up = () => setIn('btn', 0);
+  g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+})();
+
+/* ----- sonido (Web Audio, onda cuadrada, volumen bajo) ----- */
+let AC = null, OSC = null, GAIN = null;
+function toneOn(n) {
+  toneOff();
+  if (S.mute) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const t = AC.currentTime, g = AC.createGain(), o = AC.createOscillator();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+    o.type = 'square'; o.frequency.value = HZ[n]; o.connect(g); g.connect(AC.destination); o.start();
+    OSC = o; GAIN = g;
+  } catch (e) { OSC = null; }
+}
+function toneOff() {
+  if (!OSC) return;
+  try { const t = AC.currentTime; GAIN.gain.cancelScheduledValues(t); GAIN.gain.setValueAtTime(GAIN.gain.value, t); GAIN.gain.linearRampToValueAtTime(0, t + 0.012); OSC.stop(t + 0.02); } catch (e) { /* nada */ }
+  OSC = null; GAIN = null;
+}
+
+/* =================== ejecución =================== */
+// Tiempo virtual: avanza con el reloj real (×1 o ×3) y se ajusta exacto al acabar cada «esperar».
+const R = { on: false, tok: 0, step: false, gate: null, vt: 0, base: { vt: 0, real: 0 }, frozen: false, laps: 0, cur: null, speed: 1 };
+function nowVT() { if (!R.on || R.frozen) return R.vt; return R.base.vt + (performance.now() - R.base.real) / 1000 * R.speed; }
+const TR = {
+  init: {}, ev: [],
+  reset() { this.init = Object.assign({}, OUT, IN); this.ev = []; },
+  push(t, k, v) {
+    this.ev.push([t, k, v]);
+    if (this.ev.length > 6000) { this.ev.splice(0, 2000).forEach(e => { this.init[e[1]] = e[2]; }); }
+  }
+};
+const LIVE = {
+  set(k, v) { if (OUT[k] === v) return; OUT[k] = v; TR.push(nowVT(), k, v); paintOut(k); },
+  read(k) { return IN[k]; }
+};
+function mark(n) {
+  unmark(); R.cur = n;
+  const e = nodeEl.get(n); if (!e) return;
+  e.classList.add('cur');
+  const w = $('#prog'), er = e.getBoundingClientRect(), wr = w.getBoundingClientRect();
+  if (er.top < wr.top + 4 || er.bottom > wr.bottom - 4) w.scrollTop += er.top - wr.top - wr.height / 3;
+}
+function unmark() { $$('#prog .cur, #prog .timing').forEach(e => e.classList.remove('cur', 'timing')); }
+function bar(n) {
+  const e = nodeEl.get(n); if (!e) return;
+  e.style.setProperty('--d', Math.round(n.s * 1000 / R.speed) + 'ms');
+  e.classList.remove('timing'); void e.offsetWidth; e.classList.add('timing');
+}
+async function drive(my) {
+  const main = prog();
+  while (R.on && my === R.tok) {
+    R.laps++;
+    const it = run(main, LIVE); let adv = false, r;
+    while (!(r = it.next()).done) {
+      if (my !== R.tok) return;
+      const y = r.value;
+      if (typeof y === 'object') {
+        mark(y.n);
+        if (R.step) {
+          R.vt = nowVT(); R.frozen = true; updRun();
+          await new Promise(res => { R.gate = res; });
+          R.gate = null; if (my !== R.tok) return;
+          R.frozen = false; R.base = { vt: R.vt, real: performance.now() };
+        }
+        if (y.n.t === 'wait' || y.n.t === 'tone') bar(y.n);
+        continue;
+      }
+      adv = true;
+      const v0 = nowVT(); R.vt = v0; R.base = { vt: v0, real: performance.now() };
+      await sleep(y * 1000 / R.speed);
+      if (my !== R.tok) return;
+      R.vt = v0 + y; R.base = { vt: R.vt, real: performance.now() };
+    }
+    if (!adv) { await sleep(25); if (my !== R.tok) return; }   // como el loop() de Arduino: vuelve a empezar enseguida
+  }
+}
+function start(step) {
+  if (!prog().length) { say('El programa está vacío: pulsa los bloques de la derecha para añadirlos.', true); return; }
+  stop(true);
+  resetOut();
+  R.on = true; R.tok++; R.step = !!step; R.laps = 0; R.vt = 0; R.frozen = false; R.base = { vt: 0, real: performance.now() };
+  TR.reset(); scopeMode = 'live'; liveRows = rowsFor(prog());
+  document.body.classList.add('running'); svg.classList.add('run');
+  hideMsg(); updRun();
+  requestAnimationFrame(frame);
+  drive(R.tok).catch(err => { console.error(err); stop(); });
+}
+function stop(silent) {
+  const was = R.on;
+  if (R.on) R.vt = nowVT();
+  R.on = false; R.tok++; R.frozen = false;
+  if (R.gate) { const g = R.gate; R.gate = null; g(); }
+  if (OUT.bz) { OUT.bz = null; paintOut('bz'); }
+  toneOff(); unmark(); R.cur = null;
+  document.body.classList.remove('running'); svg.classList.remove('run');
+  updRun();
+  if (was) drawScope();
+}
+function updRun() {
+  $('#run').classList.toggle('stepping', R.on && R.step);
+  $('#step').classList.toggle('on', R.on && R.step);
+  $('#run').textContent = R.on && R.step ? '▶ Seguir' : '▶ Ejecutar';
+}
+function frame() { drawScope(); if (R.on) requestAnimationFrame(frame); }
+
+/* =================== simulación instantánea (para comprobar retos) =================== */
+function simulate(main, scen, Tend) {
+  const st = { r: 0, a: 0, g: 0, bz: null, sv: 0 }, ev = [], inp = scen ? scen(0) : Object.assign({}, IN);
+  let t = 0, guard = 0;
+  const x = { set(k, v) { if (st[k] !== v) { st[k] = v; ev.push([t, k, v]); } }, read(k) { return scen ? scen(t)[k] : inp[k]; } };
+  const init = Object.assign({}, st, inp);
+  while (t < Tend && guard < 400000) {
+    const t0 = t, it = run(main, x); let r;
+    while (!(r = it.next()).done) {
+      guard++;
+      if (typeof r.value === 'number') t += r.value;
+      if (t >= Tend || guard >= 400000) break;
+    }
+    if (t === t0) t += 0.025;
+  }
+  if (scen) {
+    let prev = scen(0);
+    for (let s = 0.05; s <= Tend; s += 0.05) {
+      const v = scen(s);
+      ['btn', 'luz', 'dist', 'pot'].forEach(k => { if (v[k] !== prev[k]) ev.push([Math.round(s * 100) / 100, k, v[k]]); });
+      prev = v;
+    }
+    ev.sort((a, b) => a[0] - b[0]);
+  }
+  return { init, ev };
+}
+function sampler(tr, k) {
+  const evs = tr.ev.filter(e => e[1] === k); let i = 0, v = tr.init[k];
+  return t => { while (i < evs.length && evs[i][0] <= t) { v = evs[i][2]; i++; } return v; };
+}
+function compare(base, main) {
+  const scen = base.scen ? SCEN[base.scen] : null;
+  const A = simulate(main, scen, base.T), Bt = simulate(base.sol, scen, base.T);
+  const dt = 0.05; let first = null;
+  ['r', 'a', 'g', 'bz', 'sv'].forEach(k => {
+    const sa = sampler(A, k), sb = sampler(Bt, k); let runN = 0, st = 0, want, got;
+    for (let i = 0; (i + .5) * dt < base.T; i++) {
+      const t = (i + .5) * dt, a = sa(t), b = sb(t);
+      if (a !== b) {
+        if (!runN) { st = i * dt; want = b; got = a; }
+        if (++runN >= 4) {
+          // si empatan, se cuenta antes lo que falta (algo que debería estar encendido o sonando)
+          if (!first || st < first.t - 1e-9 || (Math.abs(st - first.t) < 1e-9 && want && !first.want)) first = { t: st, k, want, got };
+          break;
+        }
+      } else runN = 0;
+    }
+  });
+  return { ok: !first, A, B: Bt, first };
+}
+function describe(f, base) {
+  const nm = { r: 'el LED rojo', a: 'el LED ámbar', g: 'el LED verde', bz: 'el zumbador', sv: 'el servo' }[f.k];
+  const val = v => f.k === 'bz' ? (v ? 'sonando ' + v : 'en silencio') : f.k === 'sv' ? 'a ' + v + '°' : (v ? 'encendido' : 'apagado');
+  let when = 'A los ' + fmt1(f.t) + ' s';
+  if (base.scen) {
+    const i = SCEN[base.scen](f.t + 0.01);
+    when += ' (' + (base.scen === 'btn' ? (i.btn ? 'con el pulsador pulsado' : 'con el pulsador suelto') :
+      base.scen === 'luz' ? 'con la luz al ' + i.luz + ' %' : base.scen === 'dist' ? 'con el coche a ' + i.dist + ' cm' : 'con el potenciómetro al ' + i.pot + ' %') + ')';
+  }
+  return when + ', ' + nm + ' debería estar ' + val(f.want) + ', pero en tu programa está ' + val(f.got) + '.';
+}
+
+/* =================== cronograma =================== */
+const cv = $('#scope'), cx = cv.getContext('2d');
+const ROWS_OUT = [
+  { k: 'r', lab: 'LED rojo', col: '#ff4b3e', ty: 'bin' }, { k: 'a', lab: 'LED ámbar', col: '#ffb000', ty: 'bin' },
+  { k: 'g', lab: 'LED verde', col: '#2ee66b', ty: 'bin' }, { k: 'bz', lab: 'zumbador', col: '#c3a1ff', ty: 'note' },
+  { k: 'sv', lab: 'servo', col: '#6cb6ff', ty: 'ang' }
+];
+const ROWS_IN = {
+  btn: { k: 'btn', lab: 'pulsador', col: '#ffd23f', ty: 'bin' }, luz: { k: 'luz', lab: 'luz %', col: '#ffe9a0', ty: 'pct' },
+  dist: { k: 'dist', lab: 'distancia', col: '#ff9f6b', ty: 'pct' }, pot: { k: 'pot', lab: 'potenc. %', col: '#7fe0d0', ty: 'pct' }
+};
+function scan(list, u) {
+  list.forEach(n => {
+    if (n.t === 'led') u[n.c] = 1; else if (n.t === 'tone') u.bz = 1; else if (n.t === 'servo') u.sv = 1;
+    else if (n.t === 'if') { u[n.cond.s] = 1; scan(n.then, u); if (n.else) scan(n.else, u); }
+  });
+  return u;
+}
+function rowsFor(main, extra) {
+  const u = scan(main, {}), rows = ROWS_OUT.slice();
+  ['btn', 'luz', 'dist', 'pot'].forEach(k => { if (u[k] || extra === k) rows.push(ROWS_IN[k]); });
+  return rows;
+}
+let scopeMode = 'empty', liveRows = ROWS_OUT, cmp = null;
+function hexA(h, a) { return 'rgba(' + [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16)).join(',') + ',' + a + ')'; }
+function segs(tr, k, t0, tEnd) {
+  const out = []; let v = tr.init[k], ta = 0;
+  for (const e of tr.ev) { if (e[1] !== k) continue; if (e[0] > ta) out.push([ta, e[0], v]); v = e[2]; ta = e[0]; }
+  out.push([ta, Infinity, v]);
+  return out.filter(g => g[1] > t0 && g[0] < tEnd).map(g => [Math.max(g[0], t0), Math.min(g[1], tEnd), g[2]]);
+}
+function paintScope(c, W, H, o) {
+  const fs = o.fs, LW = Math.round(fs * 7.4), axis = Math.round(fs * 1.7), n = o.rows.length;
+  const gx0 = LW, gw = W - LW - fs * .8, rh = (H - axis) / n, span = o.t1 - o.t0;
+  const px = t => gx0 + (t - o.t0) / span * gw;
+  c.fillStyle = '#0d1714'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#0a1210'; c.fillRect(0, 0, LW - fs * .4, H);
+  const step = [0.5, 1, 2, 5, 10, 20].find(s => gw / span * s >= fs * 3.4) || 30;
+  c.font = '600 ' + Math.round(fs * .9) + 'px "Martian Mono", monospace'; c.textBaseline = 'middle';
+  for (let t = Math.ceil(o.t0 / step - 1e-9) * step; t <= o.t1 + 1e-9; t += step) {
+    const x = Math.round(px(t)) + .5;
+    c.strokeStyle = 'rgba(120,220,160,.14)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H - axis); c.stroke();
+    c.fillStyle = 'rgba(200,240,215,.75)'; c.textAlign = x > W - fs * 1.8 ? 'right' : 'center'; c.fillText(fmt(t) + ' s', x, H - axis / 2);
+  }
+  o.rows.forEach((r, i) => {
+    const y0 = i * rh;
+    c.strokeStyle = 'rgba(120,220,160,.10)'; c.beginPath(); c.moveTo(0, Math.round(y0 + rh) + .5); c.lineTo(W, Math.round(y0 + rh) + .5); c.stroke();
+    c.fillStyle = r.col; c.textAlign = 'left'; c.font = '700 ' + Math.round(fs * .95) + 'px "Martian Mono", monospace';
+    c.fillText(r.lab, fs * .6, y0 + rh / 2);
+    const top = y0 + rh * .2, bot = y0 + rh * .8;
+    o.series.forEach(s => {
+      const sg = segs(s.tr, r.k, o.t0, s.tEnd == null ? o.t1 : s.tEnd);
+      c.save(); c.beginPath(); c.rect(gx0, y0, gw + 1, rh); c.clip();
+      if (s.ghost) { c.setLineDash([fs * .45, fs * .35]); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = Math.max(1.5, fs * .14); }
+      else { c.setLineDash([]); c.strokeStyle = r.col; c.lineWidth = Math.max(2, fs * .2); }
+      if (r.ty === 'note') {
+        sg.forEach(g => {
+          if (!g[2]) return;
+          const x0 = px(g[0]), x1 = px(g[1]);
+          if (s.ghost) c.strokeRect(x0 + 1, top, Math.max(1, x1 - x0 - 2), bot - top);
+          else {
+            c.fillStyle = hexA(r.col, .6); c.fillRect(x0, top, x1 - x0, bot - top);
+            if (x1 - x0 > fs * 2.2) { c.fillStyle = '#fff'; c.font = '700 ' + Math.round(fs * .8) + 'px "Martian Mono", monospace'; c.fillText(g[2], x0 + fs * .25, (top + bot) / 2); }
+          }
+        });
+        if (!s.ghost) { c.strokeStyle = hexA(r.col, .35); c.lineWidth = 1; c.beginPath(); c.moveTo(gx0, bot); c.lineTo(gx0 + gw, bot); c.stroke(); }
+      } else {
+        const mx = r.ty === 'ang' ? 180 : r.ty === 'pct' ? 100 : 1;
+        const yv = v => r.ty === 'bin' ? (v ? top : bot) : bot - Math.min(v, mx) / mx * (bot - top);
+        c.beginPath();
+        sg.forEach((g, j) => { const x0 = px(g[0]), x1 = px(g[1]), y = yv(g[2]); if (j === 0) c.moveTo(x0, y); else c.lineTo(x0, y); c.lineTo(x1, y); });
+        c.stroke();
+        if (!s.ghost && r.ty === 'bin') { c.fillStyle = hexA(r.col, .22); sg.forEach(g => { if (g[2]) c.fillRect(px(g[0]), top, px(g[1]) - px(g[0]), bot - top); }); }
+        if (!s.ghost && r.ty === 'ang') {
+          c.fillStyle = hexA(r.col, .9); c.font = '600 ' + Math.round(fs * .75) + 'px "Martian Mono", monospace';
+          let last = -1e9;
+          sg.forEach(g => { const x0 = px(g[0]); if (x0 - last > fs * 2.6) { c.fillText(g[2] + '°', x0 + 3, yv(g[2]) - fs * .45 < y0 + fs * .5 ? yv(g[2]) + fs * .55 : yv(g[2]) - fs * .45); last = x0; } });
+        }
+      }
+      c.restore();
+    });
+  });
+  if (o.bad) {
+    const x0 = px(o.bad), x1 = px(Math.min(o.t1, o.bad + .2));
+    c.fillStyle = 'rgba(215,38,44,.35)'; c.fillRect(x0, 0, Math.max(3, x1 - x0), H - axis);
+    c.strokeStyle = '#ff4b3e'; c.lineWidth = 2; c.setLineDash([]); c.beginPath(); c.moveTo(x0, 0); c.lineTo(x0, H - axis); c.stroke();
+  }
+  if (o.now != null) {
+    const x = px(o.now); c.strokeStyle = '#ffd23f'; c.lineWidth = 2; c.setLineDash([]); c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H - axis); c.stroke();
+  }
+}
+function remPx() { return parseFloat(getComputedStyle(document.documentElement).fontSize); }
+function drawScope() {
+  const dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
+  const W = Math.max(10, Math.round(r.width * dpr)), H = Math.max(10, Math.round(r.height * dpr));
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const fs = remPx() * .62 * dpr;
+  $('#scopeEmpty').hidden = scopeMode !== 'empty';
+  $('#scopeLeg').innerHTML = scopeMode === 'cmp' ? '<span class="lg"><i></i>tu programa</span> <span class="lg"><i class="d"></i>lo que pide el reto</span>' : '';
+  if (scopeMode === 'empty') { cx.fillStyle = '#0d1714'; cx.fillRect(0, 0, W, H); $('#clockv').textContent = '■ parado'; return; }
+  if (scopeMode === 'cmp') {
+    paintScope(cx, W, H, { fs, rows: cmp.rows, t0: 0, t1: cmp.T, series: [{ tr: cmp.res.B, ghost: true }, { tr: cmp.res.A }], bad: cmp.res.first ? cmp.res.first.t : null });
+    $('#clockv').textContent = 'comprobación · 0–' + cmp.T + ' s';
+    return;
+  }
+  const now = nowVT(), span = 15, t1 = Math.max(span, now), t0 = t1 - span;
+  paintScope(cx, W, H, { fs, rows: liveRows, t0, t1, series: [{ tr: TR, tEnd: now }], now: R.on ? now : null });
+  $('#clockv').textContent = R.on ? (R.step ? '⏭ paso a paso' : '▶ ejecutando') + ' · vuelta ' + R.laps + ' · ' + fmt1(now) + ' s' + (R.speed > 1 ? ' · ×3' : '')
+    : '■ parado · ' + fmt1(now) + ' s';
+}
+
+/* =================== programa (editor de bloques) =================== */
+const wrap = $('#prog');
+let nodeEl = new WeakMap(), snap = '[]', caret = null;
+function inTree(list, root) {
+  root = root || prog();
+  if (list === root) return true;
+  return root.some(n => n.t === 'if' && (inTree(list, n.then) || (n.else && inTree(list, n.else))));
+}
+function listInside(node, list) {
+  if (node.t !== 'if') return false;
+  if (node.then === list || node.else === list) return true;
+  return node.then.some(n => listInside(n, list)) || (node.else || []).some(n => listInside(n, list));
+}
+function render() {
+  const main = prog();
+  if (!caret || !inTree(caret)) caret = main;
+  nodeEl = new WeakMap();
+  wrap.innerHTML = '';
+  wrap.appendChild(el('div', 'blk hat', 'al iniciar la placa'));
+  const fv = el('div', 'cblk forever');
+  fv.appendChild(el('div', 'blk fhead', 'por siempre <small>· bucle principal</small>'));
+  fv.appendChild(mouth(main, true));
+  fv.appendChild(el('div', 'blk ffoot'));
+  wrap.appendChild(fv);
+  snap = JSON.stringify(main);
+  $('#undo').disabled = !hist().length;
+  if (R.on && R.cur) { const e = nodeEl.get(R.cur); if (e) e.classList.add('cur'); }
+}
+function mouth(list, isMain) {
+  const m = el('div', 'mouth'); m._list = list;
+  list.forEach(n => m.appendChild(nodeDom(n, list)));
+  const ez = el('div', 'endzone');
+  if (list === caret) { m.classList.add('caret'); ez.innerHTML = '<i></i>' + (list.length ? 'aquí se añaden' : (isMain ? 'vacío · pulsa los bloques de la derecha' : 'aquí se añaden')); }
+  else if (!list.length) ez.textContent = 'vacío · clic aquí para meter bloques';
+  m.appendChild(ez);
+  return m;
+}
+function nodeDom(n, list) {
+  if (n.t === 'if') {
+    const d = el('div', 'nd cif'); d._node = n; d._list = list;
+    const h = el('div', 'blk ifh grab', B['if'].html(n)); d.appendChild(h); nodeEl.set(n, h);
+    d.appendChild(mouth(n.then));
+    if (n.else) { d.appendChild(el('div', 'blk elseh', 'si no')); d.appendChild(mouth(n.else)); }
+    d.appendChild(el('div', 'blk cfoot'));
+    return d;
+  }
+  const b = el('div', 'nd blk grab ' + B[n.t].cls, B[n.t].html(n)); b._node = n; b._list = list; nodeEl.set(n, b);
+  return b;
+}
+function commit(fn) {
+  if (R.on) stop();
+  hist().push(snap); if (hist().length > 60) hist().shift();
+  fn(); save(); leaveCmp(); render();
+}
+function leaveCmp() { if (scopeMode === 'cmp') { scopeMode = TR.ev.length || R.vt ? 'live' : 'empty'; drawScope(); } }
+function add(n, btn) {
+  const list = caret && inTree(caret) ? caret : prog();
+  commit(() => list.push(n));
+  if (n.t === 'if') { caret = n.then; render(); }
+  const e = nodeEl.get(n);
+  if (e) { e.classList.add('pop'); const w = wrap, er = e.getBoundingClientRect(), wr = w.getBoundingClientRect(); if (er.bottom > wr.bottom - 20) w.scrollTop += er.bottom - wr.bottom + 40; }
+  if (btn) { btn.classList.remove('flash'); void btn.offsetWidth; btn.classList.add('flash'); }
+}
+function removeNode(n, list) {
+  commit(() => { const i = list.indexOf(n); if (i >= 0) list.splice(i, 1); });
+}
+function setPath(o, path, v) { const p = path.split('.'); while (p.length > 1) o = o[p.shift()]; o[p[0]] = v; }
+
+// cambiar una casilla de un bloque del programa
+wrap.addEventListener('change', e => {
+  const s = e.target; if (s.tagName !== 'SELECT') return;
+  const nd = s.closest('.nd'); if (!nd) return;
+  hist().push(snap);
+  setPath(nd._node, s.dataset.f, s.dataset.num ? Number(s.value) : s.value);
+  save(); leaveCmp(); render();
+});
+
+// clic = quitar · arrastrar = mover · clic en zona amarilla = elegir dónde se añaden
+let drag = null;
+wrap.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('select')) return;
+  const g = e.target.closest('.grab');
+  if (!g) {
+    let m = null;
+    const eh = e.target.closest('.elseh');
+    if (eh) m = eh.nextElementSibling;
+    else if (e.target.closest('.fhead,.ffoot')) m = wrap.querySelector('.forever>.mouth');
+    else m = e.target.closest('.mouth');
+    if (m && m._list) { caret = m._list; render(); }
+    return;
+  }
+  const nd = g.closest('.nd');
+  drag = { g, nd, node: nd._node, list: nd._list, x: e.clientX, y: e.clientY, on: false, t: null };
+  try { g.setPointerCapture(e.pointerId); } catch (er) { /* nada */ }
+});
+wrap.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    if (R.on) stop();
+    drag.on = true;
+    const r = drag.nd.getBoundingClientRect();
+    drag.dx = e.clientX - r.left; drag.dy = e.clientY - r.top;
+    drag.ghost = drag.nd.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.style.width = r.width + 'px';
+    document.body.appendChild(drag.ghost);
+    drag.nd.classList.add('ghosted');
+    drag.line = el('div', 'dropline'); document.body.appendChild(drag.line);
+  }
+  drag.ghost.style.left = (e.clientX - drag.dx) + 'px'; drag.ghost.style.top = (e.clientY - drag.dy) + 'px';
+  const wr = wrap.getBoundingClientRect();
+  if (e.clientY < wr.top + 24) wrap.scrollTop -= 10; else if (e.clientY > wr.bottom - 24) wrap.scrollTop += 10;
+  drag.t = findDrop(e.clientX, e.clientY, drag);
+  if (drag.t) {
+    const rr = drag.t.el.getBoundingClientRect(), y = drag.t.pos === 'top' ? rr.top - 2 : rr.bottom;
+    Object.assign(drag.line.style, { display: 'block', left: (rr.left + (drag.t.indent ? remPx() : 0)) + 'px', top: (y - 2) + 'px', width: Math.max(rr.width, 90) + 'px' });
+  } else drag.line.style.display = 'none';
+});
+function endDrag() {
+  if (!drag) return null;
+  const d = drag; drag = null;
+  if (d.ghost) d.ghost.remove(); if (d.line) d.line.remove(); d.nd.classList.remove('ghosted');
+  return d;
+}
+wrap.addEventListener('pointerup', () => {
+  const d = endDrag(); if (!d) return;
+  if (!d.on) { removeNode(d.node, d.list); return; }
+  const t = d.t; if (!t) return;
+  commit(() => {
+    const si = d.list.indexOf(d.node); d.list.splice(si, 1);
+    let i = t.i; if (t.list === d.list && si < i) i--;
+    t.list.splice(i, 0, d.node);
+  });
+});
+wrap.addEventListener('pointercancel', endDrag);
+function findDrop(x, y, d) {
+  const e = document.elementFromPoint(x, y);
+  if (!e || !wrap.contains(e)) return null;
+  let t = null;
+  const ez = e.closest('.endzone'), g = e.closest('.grab'), cf = e.closest('.cfoot,.elseh'), m = e.closest('.mouth');
+  if (ez) t = { list: ez.parentNode._list, i: ez.parentNode._list.length, el: ez, pos: 'top' };
+  else if (g) {
+    const nd = g.closest('.nd'), r = g.getBoundingClientRect(), up = y < r.top + r.height / 2;
+    if (g.classList.contains('ifh') && !up) t = { list: nd._node.then, i: 0, el: g, pos: 'bottom', indent: true };
+    else { const i = nd._list.indexOf(nd._node); t = { list: nd._list, i: up ? i : i + 1, el: up ? g : nd, pos: up ? 'top' : 'bottom' }; }
+  } else if (cf && cf.classList.contains('cfoot')) {
+    const nd = cf.closest('.nd'); t = { list: nd._list, i: nd._list.indexOf(nd._node) + 1, el: nd, pos: 'bottom' };
+  } else if (m) t = { list: m._list, i: m._list.length, el: m.lastElementChild, pos: 'top' };
+  else if (e.closest('.fhead,.hat')) { const mm = wrap.querySelector('.forever>.mouth'); t = { list: mm._list, i: 0, el: mm.firstElementChild, pos: 'top' }; }
+  if (!t) return null;
+  if (d.node.t === 'if' && listInside(d.node, t.list)) return null;
+  return t;
+}
+
+/* ----- paleta ----- */
+let dur = 0.5;
+$('#notes').innerHTML = NOTES.map(n => '<button class="pb c-tone note" data-add=\'{"t":"tone","n":"' + n + '"}\'>' + n + '</button>').join('');
+$('#pifs').innerHTML = ['btn', 'luz', 'dist', 'pot'].map(s => {
+  const c = { s, op: s === 'pot' ? '>' : s === 'btn' ? '=' : '<', v: s === 'btn' ? 1 : s === 'luz' ? 30 : s === 'dist' ? 20 : 50 };
+  return '<div class="pb pif c-if" role="button" tabindex="0" data-add=\'' + JSON.stringify({ t: 'if', cond: c }) + '\'>si ' + condHTML(c) + ' entonces</div>';
+}).join('');
+$('#durs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  dur = Number(b.dataset.d); $$('#durs button').forEach(x => x.classList.toggle('on', x === b));
+});
+function palAdd(b) {
+  const n = JSON.parse(b.dataset.add);
+  if (n.t === 'tone') n.s = dur;
+  if (n.t === 'if') {
+    $$('select', b).forEach(s => setPath(n, s.dataset.f, s.dataset.num ? Number(s.value) : s.value));
+    n.then = []; n.else = $('#withElse').checked ? [] : null;
+  }
+  add(n, b);
+}
+$('#pal').addEventListener('click', e => {
+  if (e.target.closest('select')) return;
+  const b = e.target.closest('[data-add]'); if (b) palAdd(b);
+});
+$('#pal').addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('pif')) { e.preventDefault(); palAdd(e.target); }
+});
+
+/* =================== retos =================== */
+const curReto = () => getReto(S.reto[S.level]);
+const baseOf = r => r ? (r.target ? getReto(r.target) : r) : null;
+function retoCount() {
+  const L = RETOS[S.level === 'L1' ? 'L1' : 'L2'], d = L.filter(r => S.done[r.id]).length;
+  $('#retosCount').textContent = d + '/' + L.length;
+}
+function renderReto() {
+  const r = curReto(), box = $('#retoCard');
+  retoCount();
+  if (!r) { box.hidden = true; return; }
+  const bug = !!r.target, list = RETOS[S.level === 'L1' ? (bug ? 'B1' : 'L1') : (bug ? 'B2' : 'L2')], i = list.indexOf(r) + 1;
+  const st = S.done[r.id];
+  box.hidden = false;
+  box.innerHTML = '<span class="no' + (bug ? ' bug' : '') + '">' + (bug ? '✗' : String(i).padStart(2, '0')) + '</span>' +
+    '<div class="tx"><b>' + (bug ? 'Encuentra el fallo · ' : 'Reto · ') + esc(r.tit) + (st ? ' <span class="done">' + (st === 'ok' ? '✓ ¡hecho!' : '✓ con ayuda') + '</span>' : '') + '</b><p>' + esc(r.txt) + '</p></div>' +
+    '<div class="acts"><button class="chip go" id="check" title="Comparar tu programa con lo que pide el reto">✓ Comprobar</button><button class="chip" id="sol" title="Cargar la solución (se puede deshacer)">Solución</button></div>' +
+    '<button class="x" id="noReto" title="Quitar el reto">✕</button>';
+  $('#check').onclick = check; $('#sol').onclick = showSol;
+  $('#noReto').onclick = () => { S.reto[S.level] = null; save(); leaveCmp(); renderReto(); };
+}
+function check() {
+  const r = curReto(), base = baseOf(r); if (!base) return;
+  stop();
+  const main = prog();
+  if (!main.length) { say('El programa está vacío: primero haz el programa y luego compruébalo.', true); return; }
+  const res = compare(base, main);
+  cmp = { res, T: base.T, rows: base.scen ? ROWS_OUT.concat([ROWS_IN[base.scen]]) : ROWS_OUT };
+  scopeMode = 'cmp'; drawScope();
+  if (res.ok) {
+    S.done[r.id] = S.help[r.id] && S.done[r.id] !== 'ok' ? 'help' : 'ok';
+    save(); renderReto();
+    const st = $('#stamp'); st.classList.remove('show'); void st.offsetWidth; st.classList.add('show');
+    say('¡Bien! Tu cronograma es igual que el del reto.' + (S.help[r.id] ? ' (Has mirado la solución: queda «con ayuda».)' : ''));
+  } else say(describe(res.first, base) + ' Mira la raya roja del cronograma.', true);
+}
+function showSol() {
+  const r = curReto(), base = baseOf(r); if (!base) return;
+  commit(() => { S.prog[S.level] = clone(base.sol); });
+  S.help[r.id] = 1; caret = null; save(); render();
+  say('Esta es una solución. Pulsa ▶ Ejecutar para verla funcionar. ↶ Deshacer recupera tu programa.');
+}
+function chooseReto(id) {
+  const r = getReto(id);
+  S.reto[S.level] = id;
+  if (r && r.prog) {
+    commit(() => { S.prog[S.level] = clone(r.prog); }); caret = null; render();
+    say('Programa con fallo cargado. Ejecútalo, busca el error y arréglalo. ↶ Deshacer recupera el tuyo.');
+  } else hideMsg();
+  save(); leaveCmp(); renderReto(); closeModals();
+}
+function buildRetos() {
+  const L2 = S.level === 'L2', cur = S.reto[S.level];
+  const card = (r, i, bug) => {
+    const st = S.done[r.id] || '';
+    return '<button class="rc ' + st + (r.id === cur ? ' cur' : '') + '" data-id="' + r.id + '"><span class="no' + (bug ? ' bug' : '') + '">' + (bug ? '✗' : String(i).padStart(2, '0')) + '</span>' +
+      '<span class="tx"><b>' + esc(r.tit) + '</b><span>' + esc(r.txt) + '</span></span><span class="st">' + (st === 'ok' ? '¡hecho!' : st === 'help' ? 'con ayuda' : '') + '</span></button>';
+  };
+  $('#retoList').innerHTML = '<h4>Retos · Nivel ' + (L2 ? '2 · entradas' : '1 · actuadores') + '</h4><div class="rgrid">' + RETOS[L2 ? 'L2' : 'L1'].map((r, i) => card(r, i + 1)).join('') + '</div>' +
+    '<h4>Encuentra el fallo</h4><div class="rgrid">' + RETOS[L2 ? 'B2' : 'B1'].map((r, i) => card(r, i + 1, true)).join('') + '</div>';
+}
+$('#retoList').addEventListener('click', e => { const b = e.target.closest('.rc'); if (b) chooseReto(b.dataset.id); });
+$('#libre').onclick = () => { S.reto[S.level] = null; save(); leaveCmp(); renderReto(); closeModals(); };
+
+/* =================== Arduino =================== */
+function inoCode(main) {
+  const u = scan(main, {}), L = [];
+  L.push('// Programa hecho con Placa virtual · Computación y Robótica 2.º ESO');
+  if (u.sv) L.push('#include <Servo.h>');
+  L.push('');
+  ['rojo', 'ámbar', 'verde'].forEach(c => { if (u[c]) L.push('const int ' + LEDS[c].id + ' = ' + LEDS[c].pin + ';      // LED ' + c); });
+  if (u.bz) L.push('const int zumbador = 8;');
+  if (u.btn) L.push('const int pulsador = 5;');
+  if (u.dist) { L.push('const int trigPin = 6;      // ultrasonidos: disparo'); L.push('const int echoPin = 7;      // ultrasonidos: eco'); }
+  if (u.luz) L.push('const int sensorLuz = A0;');
+  if (u.pot) L.push('const int potenciometro = A1;');
+  if (u.sv) L.push('Servo barrera;               // servo en el pin 9');
+  if (L[L.length - 1] !== '') L.push('');
+  L.push('void setup() {');
+  ['rojo', 'ámbar', 'verde'].forEach(c => { if (u[c]) L.push('  pinMode(' + LEDS[c].id + ', OUTPUT);'); });
+  if (u.bz) L.push('  pinMode(zumbador, OUTPUT);');
+  if (u.btn) L.push('  pinMode(pulsador, INPUT);');
+  if (u.dist) { L.push('  pinMode(trigPin, OUTPUT);'); L.push('  pinMode(echoPin, INPUT);'); }
+  if (u.sv) L.push('  barrera.attach(9);');
+  L.push('}', '', 'void loop() {');
+  if (!main.length) L.push('  // (vacío)'); else body(main, '  ', L);
+  L.push('}');
+  if (u.dist) L.push('', '// Mide la distancia en cm con el sensor de ultrasonidos', 'long distanciaCm() {', '  digitalWrite(trigPin, LOW);', '  delayMicroseconds(2);',
+    '  digitalWrite(trigPin, HIGH);', '  delayMicroseconds(10);', '  digitalWrite(trigPin, LOW);', '  return pulseIn(echoPin, HIGH) / 58;', '}');
+  return L.join('\n');
+}
+function condC(c) {
+  if (c.s === 'btn') return 'digitalRead(pulsador) == ' + (c.v ? 'HIGH' : 'LOW');
+  if (c.s === 'dist') return 'distanciaCm() ' + c.op + ' ' + c.v;
+  return 'map(analogRead(' + (c.s === 'luz' ? 'sensorLuz' : 'potenciometro') + '), 0, 1023, 0, 100) ' + c.op + ' ' + c.v;
+}
+function body(list, ind, L) {
+  list.forEach(n => {
+    if (n.t === 'led') L.push(ind + 'digitalWrite(' + LEDS[n.c].id + ', ' + (n.v ? 'HIGH' : 'LOW') + ');');
+    else if (n.t === 'wait') L.push(ind + 'delay(' + Math.round(n.s * 1000) + ');');
+    else if (n.t === 'tone') { L.push(ind + 'tone(zumbador, ' + HZ[n.n] + ', ' + Math.round(n.s * 900) + ');   // ' + n.n); L.push(ind + 'delay(' + Math.round(n.s * 1000) + ');'); }
+    else if (n.t === 'servo') L.push(ind + 'barrera.write(' + n.a + ');');
+    else if (n.t === 'if') {
+      L.push(ind + 'if (' + condC(n.cond) + ') {'); body(n.then, ind + '  ', L);
+      if (n.else) { L.push(ind + '} else {'); body(n.else, ind + '  ', L); }
+      L.push(ind + '}');
+    }
+  });
+}
+function hl(code) {
+  const re = /(\/\/.*$)|(#include|<Servo\.h>)|(\b(?:void|const|int|long|if|else|return)\b)|(\b(?:HIGH|LOW|OUTPUT|INPUT|A0|A1)\b)|(\b\d+\b)|(\b[a-zA-Z_]\w*(?=\())/gm;
+  let out = '', last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index));
+    const cls = m[1] ? 'cm' : m[2] ? 'pp' : m[3] ? 'kw' : m[4] ? 'ct' : m[5] ? 'nm' : 'fn';
+    out += '<span class="' + cls + '">' + esc(m[0]) + '</span>'; last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+$('#inoBtn').onclick = () => { $('#inoCode').innerHTML = hl(inoCode(prog())); openModal('#mIno'); };
+$('#inoCopy').onclick = () => {
+  const t = inoCode(prog()), done = () => { $('#inoCopy').textContent = '¡Copiado!'; setTimeout(() => { $('#inoCopy').textContent = 'Copiar'; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => {});
+  else { const ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { /* nada */ } ta.remove(); }
+};
+
+/* =================== imagen para Classroom =================== */
+const BODYF = '"Atkinson Hyperlegible Next","Atkinson Hyperlegible",sans-serif';
+function rr(c, x, y, w, h, r, col) { c.fillStyle = col; c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); c.fill(); }
+function cBar(c, x, y, txt, col) {
+  c.font = '700 17px ' + BODYF; const w = Math.max(150, c.measureText(txt).width + 30);
+  rr(c, x, y, w, 32, 6, col); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x, y + 28, w, 4);
+  c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(txt, x + 14, y + 16); return y + 32;
+}
+function cMouth(c, list, x, y, col) {
+  const y0 = y; y += 3;
+  list.forEach(n => {
+    if (n.t === 'if') {
+      y = cBar(c, x + 18, y, B['if'].text(n), COL['if']); y = cMouth(c, n.then, x + 18, y, COL['if']);
+      if (n.else) { y = cBar(c, x + 18, y, 'si no', COL['if']); y = cMouth(c, n.else, x + 18, y, COL['if']); }
+      rr(c, x + 18, y, 110, 14, 5, COL['if']); y += 17;
+    } else y = cBar(c, x + 18, y, B[n.t].text(n), COL[n.t]) + 3;
+  });
+  y = Math.max(y, y0 + 20); c.fillStyle = col; c.fillRect(x, y0, 18, y - y0); return y;
+}
+function cProg(c, main, x, y) {
+  y = cBar(c, x, y, 'al iniciar la placa', COL.ev) + 3;
+  y = cBar(c, x, y, 'por siempre', COL.ct); y = cMouth(c, main, x, y, COL.ct);
+  rr(c, x, y, 110, 14, 5, COL.ct); return y + 14;
+}
+$('#png').onclick = () => {
+  stop();
+  const main = prog(), r = curReto(), base = baseOf(r), scen = base && base.scen ? SCEN[base.scen] : null, Tend = base ? base.T : 15;
+  const tr = simulate(main, scen, Tend), rows = rowsFor(main, base && base.scen);
+  const ph = cProg(document.createElement('canvas').getContext('2d'), main, 0, 0);
+  const W = 1600, sh = rows.length * 46 + 40, H = Math.max(ph + 230, sh + 260);
+  const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H; const c = cnv.getContext('2d');
+  c.fillStyle = '#fbf8ef'; c.fillRect(0, 0, W, H); c.strokeStyle = '#14201a'; c.lineWidth = 4; c.strokeRect(16, 16, W - 32, H - 32);
+  c.fillStyle = '#14201a'; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+  c.font = '900 48px "Big Shoulders Stencil", "Arial Narrow", sans-serif'; c.fillText('PLACA VIRTUAL', 44, 80);
+  c.font = '600 16px "Martian Mono", monospace'; c.fillStyle = '#55605a';
+  const d = new Date();
+  c.fillText((r ? (r.target ? 'Encuentra el fallo: ' : 'Reto: ') + r.tit : 'Programa libre') + '  ·  Nivel ' + (S.level === 'L1' ? '1 (actuadores)' : '2 (entradas)') + '  ·  ' + d.toLocaleDateString('es-ES'), 46, 112);
+  if (r && S.done[r.id]) { c.font = '700 34px Caveat, cursive'; c.fillStyle = '#1f8a4c'; c.fillText(S.done[r.id] === 'ok' ? '✓ ¡reto superado!' : '✓ superado con ayuda', W - 380, 84); }
+  cProg(c, main, 46, 150);
+  const sx = 760, sw = W - sx - 46;
+  c.font = '800 13px "Martian Mono", monospace'; c.fillStyle = '#14201a'; c.fillText('CRONOGRAMA (0–' + Tend + ' s)', sx, 142);
+  c.save(); c.translate(sx, 152); paintScope(c, sw, sh, { fs: 15, rows, t0: 0, t1: Tend, series: [{ tr }] }); c.restore();
+  c.font = '600 12px "Martian Mono", monospace'; c.fillStyle = '#55605a';
+  c.fillText('Placa virtual · © 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0', 46, H - 34);
+  cnv.toBlob(b => {
+    if (!b) return;
+    const a = el('a'); a.href = URL.createObjectURL(b);
+    a.download = 'placa-virtual-' + (r ? r.id : 'programa') + '.png';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+};
+
+/* =================== mensajes, ventanas y botones =================== */
+let msgT = null;
+function say(t, bad) {
+  const m = $('#msg'); m.textContent = t; m.classList.toggle('bad', !!bad); m.classList.add('show');
+  clearTimeout(msgT); msgT = setTimeout(hideMsg, bad ? 12000 : 6000);
+}
+function hideMsg() { $('#msg').classList.remove('show'); }
+$('#msg').onclick = hideMsg;
+function openModal(id) { $(id).hidden = false; }
+function closeModals() { $$('.modal').forEach(m => { m.hidden = true; }); }
+$$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModals(); }));
+$('#retosBtn').onclick = () => { buildRetos(); openModal('#mRetos'); };
+$('#helpBtn').onclick = () => openModal('#mHelp');
+
+$('#run').onclick = () => { if (R.on && R.step) { R.step = false; updRun(); if (R.gate) R.gate(); } else start(false); };
+$('#stop').onclick = () => stop();
+$('#step').onclick = () => {
+  if (!R.on) { start(true); return; }
+  if (!R.step) { R.step = true; updRun(); return; }
+  if (R.gate) R.gate();
+};
+$('#fast').onclick = () => {
+  if (R.on) { R.vt = nowVT(); R.base = { vt: R.vt, real: performance.now() }; }
+  R.speed = R.speed > 1 ? 1 : 3; S.speed = R.speed; save();
+  $('#fast').textContent = '×' + R.speed; $('#fast').classList.toggle('on', R.speed > 1);
+};
+$('#undo').onclick = () => {
+  if (!hist().length) return;
+  if (R.on) stop();
+  S.prog[S.level] = clean(JSON.parse(hist().pop())); caret = null; save(); leaveCmp(); render();
+};
+$('#clear').onclick = () => {
+  if (!prog().length) return;
+  commit(() => { prog().length = 0; });
+  say('Programa borrado. ↶ Deshacer lo recupera.');
+};
+function updMute() { $('#mute').textContent = '♪ Sonido: ' + (S.mute ? 'no' : 'sí'); $('#mute').classList.toggle('on', !!S.mute); }
+$('#mute').onclick = () => { S.mute = !S.mute; save(); updMute(); if (S.mute) toneOff(); else if (OUT.bz) toneOn(OUT.bz); };
+function setLevel(L) {
+  if (L === S.level) return;
+  stop(); S.level = L; save();
+  document.body.classList.toggle('L2', L === 'L2'); document.body.classList.toggle('L1', L === 'L1');
+  $$('.lv').forEach(b => b.classList.toggle('on', b.dataset.level === L));
+  caret = null; layoutBoard(); resetOut(); render(); renderReto(); hideMsg();
+  scopeMode = 'empty'; TR.reset(); R.vt = 0; liveRows = rowsFor(prog()); drawScope();
+}
+$$('.lv').forEach(b => { b.onclick = () => setLevel(b.dataset.level); });
+
+document.addEventListener('keydown', e => {
+  const modal = $$('.modal').some(m => !m.hidden);
+  if (e.key === 'Escape') { if (modal) closeModals(); else if (R.on) stop(); return; }
+  if (modal) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.closest('input,textarea')) { e.preventDefault(); $('#undo').click(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); $('#run').click(); }
+});
+addEventListener('resize', () => drawScope());
+
+/* =================== arranque =================== */
+R.speed = S.speed === 3 ? 3 : 1; $('#fast').textContent = '×' + R.speed; $('#fast').classList.toggle('on', R.speed > 1);
+document.body.classList.toggle('L2', S.level === 'L2'); document.body.classList.toggle('L1', S.level === 'L1');
+$$('.lv').forEach(b => b.classList.toggle('on', b.dataset.level === S.level));
+layoutBoard(); resetOut(); paintIn(); render(); renderReto(); updMute(); updRun();
+liveRows = rowsFor(prog());
+drawScope();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawScope);
+})();
+</script>
+</body>
+</html>
