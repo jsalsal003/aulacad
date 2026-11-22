@@ -211,7 +211,7 @@ var PlacaNucleo = (function () {
     { lv: 4, tit: 'Alarma de noche', txt: 'Espera hasta que la luz baje del 30 %; después repite 3 veces: La 0,5 s y esperar 0,5 s.', T: 10, scen: 'luz',
       sol: [UNTIL('luz', '<', 30), REP(3, [T('La', .5), W(.5)])] }
   ];
-  const EXAM_N = 5, MINUTOS = 30;
+  const EXAM_N = 5, MINUTOS = 45;
   // reparte los 5 ejercicios entre los niveles elegidos (por turnos) y los ordena por nivel
   function elegirExamen(niveles, rand) {
     rand = rand || Math.random;

@@ -71,7 +71,7 @@
   @keyframes pulse{50%{background:#26a85c}}
   .count{background:var(--ink);color:var(--yellow);border-radius:.2rem;padding:.05rem .35rem;font-weight:800}
 
-  /* barra del examen */
+  /* barra del desafío (en el código se llama «examen») */
   .exbar{display:flex;align-items:center;gap:.5rem;margin-left:auto}
   .exn{font-family:var(--display);font-weight:900;font-size:1.3rem;text-transform:uppercase;white-space:nowrap}
   .exn b{color:var(--red)}
@@ -321,16 +321,16 @@
     <button class="lv" data-level="L2" title="Pulsador, luz, potenciómetro y ultrasonidos con «si… entonces»">Nivel 2 <small>entradas</small></button>
     <button class="lv" data-level="L3" title="LED RGB, motor y pantalla de números">Nivel 3 <small>más salidas</small></button>
     <button class="lv" data-level="L4" title="Repetir, esperar hasta que y sensor de temperatura">Nivel 4 <small>bucles</small></button>
-    <button class="lv exam" id="examBtn" title="Examen: 5 ejercicios en 30 minutos, sin ayudas ni sonido. Al terminar se descarga un PDF para Classroom">⏱ Examen</button>
+    <button class="lv exam" id="examBtn" title="Desafío: 5 ejercicios de los 4 niveles en 45 minutos, sin ayudas ni sonido. Al terminar se descarga un PDF para Classroom">⏱ Desafío</button>
   </div>
   <div class="exbar" id="exBar" hidden>
-    <span class="tl" id="timeLeft" title="Tiempo que queda">30:00</span>
+    <span class="tl" id="timeLeft" title="Tiempo que queda">45:00</span>
     <button class="arrow" id="exPrev" title="Ejercicio anterior">◀</button>
     <span class="exn">Ejercicio <b id="exN">1</b>/<span id="exT">5</span></span>
     <button class="arrow" id="exNext" title="Ejercicio siguiente">▶</button>
     <div class="dots" id="exDots"></div>
-    <button class="chip go" id="entregar" title="Terminar el examen y descargar el PDF">Entregar</button>
-    <button class="chip" id="exSalir" title="Volver a practicar">Salir del examen</button>
+    <button class="chip go" id="entregar" title="Terminar el desafío y descargar el PDF">Entregar</button>
+    <button class="chip" id="exSalir" title="Volver a practicar">Salir del desafío</button>
   </div>
   <button class="chip go" id="retosBtn" title="Elegir un reto">☰ Retos <span class="count" id="retosCount">0/7</span></button>
   <button class="chip" id="mute" title="Activar o quitar el sonido del zumbador">♪ Sonido: sí</button>
@@ -474,43 +474,36 @@
   <ul>
     <li>los programas de los 4 niveles,</li>
     <li>los retos hechos y los que se hicieron con ayuda,</li>
-    <li>el nombre y el curso escritos para el examen,</li>
-    <li>el examen entregado, si lo hay: <b id="bPdf">descarga antes su PDF si todavía no lo has subido a Classroom.</b></li>
+    <li>el nombre y el curso escritos para el desafío,</li>
+    <li>el desafío entregado, si lo hay: <b id="bPdf">descarga antes su PDF si todavía no lo has subido a Classroom.</b></li>
   </ul>
   <p>No se puede deshacer.</p>
   <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="bYes" style="background:var(--red);color:#fff">Sí, borrar todo</button></div>
 </div></div>
 <div class="modal" id="mExam" hidden><div class="dlg red">
-  <h3>⏱ ¿Empezar el examen?</h3>
+  <h3>⏱ ¿Empezar el desafío?</h3>
   <ul>
-    <li>Tendrás <b>30 minutos</b> para programar <b>5 ejercicios nuevos</b>. Pasa de uno a otro con las flechas de arriba.</li>
-    <li>Durante el examen <b>no hay</b> retos, ni Solución, ni Comprobar. Puedes ejecutar tus programas para probarlos.</li>
+    <li>Tendrás <b><span class="xMin">45</span> minutos</b> para programar <b>5 ejercicios nuevos</b> de los 4 niveles. Pasa de uno a otro con las flechas de arriba.</li>
+    <li>Durante el desafío <b>no hay</b> retos, ni Solución, ni Comprobar. Puedes ejecutar tus programas para probarlos.</li>
     <li>El <b>sonido está apagado</b>: las notas del zumbador se ven salir en la placa y en su pentagrama.</li>
     <li>Al terminar (o al acabarse el tiempo) se descarga un <b>PDF</b> con tus programas y un código QR para el profesor. <b>Súbelo a Classroom.</b></li>
   </ul>
   <label class="f">Nombre y apellidos <input type="text" id="xNombre" maxlength="60" autocomplete="name"></label>
   <label class="f">Curso y grupo <input type="text" id="xCurso" maxlength="30" placeholder="por ejemplo 2º ESO B"></label>
-  <label class="f">Niveles que entran (te lo dice el profesor)</label>
-  <div class="lvs" id="xLvs">
-    <label><input type="checkbox" value="1" checked> Nivel 1</label>
-    <label><input type="checkbox" value="2" checked> Nivel 2</label>
-    <label><input type="checkbox" value="3"> Nivel 3</label>
-    <label><input type="checkbox" value="4"> Nivel 4</label>
-  </div>
   <p class="err" id="xErr"></p>
-  <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="xStart">Sí, empezar el examen</button></div>
+  <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="xStart">Sí, empezar el desafío</button></div>
 </div></div>
 <div class="modal" id="mEntregar" hidden><div class="dlg red">
   <h3>¿Entregar ya?</h3>
   <p>Después ya no podrás cambiar tus programas. Te quedan <b id="eLeft"></b>. <span id="eVacios"></span></p>
-  <div class="btns"><button class="chip" data-close>Seguir con el examen</button><button class="chip go" id="eYes">Sí, entregar</button></div>
+  <div class="btns"><button class="chip" data-close>Seguir con el desafío</button><button class="chip go" id="eYes">Sí, entregar</button></div>
 </div></div>
 <div class="modal" id="mFin" hidden><div class="dlg red">
-  <h3 id="fTitle">¡Examen terminado!</h3>
+  <h3 id="fTitle">¡Desafío terminado!</h3>
   <p>Descarga el PDF y <b>súbelo a Classroom</b>. Tiene una página por ejercicio y una última con el código QR para el profesor.</p>
   <p class="err" id="fErr"></p>
   <div class="btns"><button class="chip" id="fVer">Ver mis programas</button><button class="chip" id="fPractica">Volver a practicar</button><button class="chip go" id="fPdf">⬇ Descargar PDF</button></div>
-  <p class="small"><button class="link" id="fNuevo">Empezar otro examen</button></p>
+  <p class="small"><button class="link" id="fNuevo">Empezar otro desafío</button></p>
 </div></div>
 
 <script src="nucleo.js"></script>
@@ -1039,7 +1032,7 @@ function nodeDom(n, list) {
   return b;
 }
 function commit(fn) {
-  if (locked()) { say('El examen ya está entregado: los programas no se pueden cambiar.', true); return false; }
+  if (locked()) { say('El desafío ya está entregado: los programas no se pueden cambiar.', true); return false; }
   if (R.on) stop();
   hist().push(snap); if (hist().length > 60) hist().shift();
   fn(); save(); leaveCmp(); render();
@@ -1207,7 +1200,7 @@ function renderReto() {
   if (EXV()) {
     const ex = curEx(), i = S.exam.cur;
     box.hidden = false;
-    box.innerHTML = '<span class="no bug">' + (i + 1) + '</span><div class="tx"><b>Examen · ejercicio ' + (i + 1) + ' de ' + S.exam.ids.length + ' · ' + esc(ex.tit) +
+    box.innerHTML = '<span class="no bug">' + (i + 1) + '</span><div class="tx"><b>Desafío · ejercicio ' + (i + 1) + ' de ' + S.exam.ids.length + ' · ' + esc(ex.tit) +
       (exActivo() ? '' : ' <span class="done" style="color:var(--red)">entregado</span>') + '</b><p>' + esc(ex.txt) + '</p></div>';
     return;
   }
@@ -1372,7 +1365,7 @@ $('#png').onclick = () => {
   c.fillStyle = '#14201a'; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
   c.font = '900 48px "Big Shoulders Stencil", "Arial Narrow", sans-serif'; c.fillText('PLACA VIRTUAL', 44, 80);
   c.font = '600 16px "Martian Mono", monospace'; c.fillStyle = '#55605a';
-  const titulo = EXV() ? 'Examen: ' + curEx().tit : r ? (r.target ? 'Encuentra el fallo: ' : 'Reto: ') + r.tit : 'Programa libre';
+  const titulo = EXV() ? 'Desafío: ' + curEx().tit : r ? (r.target ? 'Encuentra el fallo: ' : 'Reto: ') + r.tit : 'Programa libre';
   c.fillText(titulo + '  ·  Nivel ' + LV().n + '  ·  ' + new Date().toLocaleDateString('es-ES'), 46, 112);
   if (r && S.done[r.id]) { c.font = '700 34px Caveat, cursive'; c.fillStyle = '#1f8a4c'; c.fillText(S.done[r.id] === 'ok' ? '✓ ¡reto superado!' : '✓ superado con ayuda', W - 380, 84); }
   c.drawImage(pc, 34, 138);
@@ -1384,7 +1377,7 @@ $('#png').onclick = () => {
   cnv.toBlob(b => {
     if (!b) return;
     const a = el('a'); a.href = URL.createObjectURL(b);
-    a.download = 'placa-virtual-' + (EXV() ? 'examen-' + (S.exam.cur + 1) : r ? r.id : 'programa') + '.png';
+    a.download = 'placa-virtual-' + (EXV() ? 'desafio-' + (S.exam.cur + 1) : r ? r.id : 'programa') + '.png';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }, 'image/png');
 };
@@ -1417,13 +1410,14 @@ $('#examBtn').onclick = () => {
   openStart();
 };
 function openStart() {
+  $$('.xMin').forEach(e => { e.textContent = P.MINUTOS; });
   $('#xNombre').value = S.name || ''; $('#xCurso').value = S.group || ''; $('#xErr').textContent = '';
   closeModals(); openModal('#mExam'); setTimeout(() => $('#xNombre').focus(), 50);
 }
 $('#xStart').onclick = () => {
-  const nom = $('#xNombre').value.trim(), cur = $('#xCurso').value.trim(), lvs = $$('#xLvs input:checked').map(i => +i.value);
+  // el desafío siempre es de los 4 niveles (el alumnado no elige)
+  const nom = $('#xNombre').value.trim(), cur = $('#xCurso').value.trim(), lvs = [1, 2, 3, 4];
   if (nom.length < 3) { $('#xErr').textContent = 'Escribe tu nombre y apellidos: saldrán en el PDF.'; return; }
-  if (!lvs.length) { $('#xErr').textContent = 'Marca al menos un nivel.'; return; }
   S.name = nom; S.group = cur;
   const ids = P.elegirExamen(lvs);
   S.exam = { ids, niveles: lvs, inicio: Date.now(), activo: true, progs: ids.map(() => []), cur: 0 };
@@ -1452,7 +1446,7 @@ function finishExam(auto) {
   applyView(); openFin(auto);
 }
 function openFin(auto) {
-  $('#fTitle').textContent = auto ? '¡Se acabó el tiempo!' : '¡Examen terminado!';
+  $('#fTitle').textContent = auto ? '¡Se acabó el tiempo!' : '¡Desafío terminado!';
   $('#fErr').textContent = ''; closeModals(); openModal('#mFin');
 }
 $('#fVer').onclick = () => { closeModals(); enterExam(); };
@@ -1483,7 +1477,7 @@ function makePDF() {
         if (i) doc.addPage();
         const ex = P.EXAM[id], pg = E.progs[i];
         doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
-        doc.text('Examen de robótica  ·  Ejercicio ' + (i + 1) + ' de ' + E.ids.length + ': ' + ex.tit, 14, 14);
+        doc.text('Desafío de robótica  ·  Ejercicio ' + (i + 1) + ' de ' + E.ids.length + ': ' + ex.tit, 14, 14);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(quien + '  ·  nivel ' + ex.lv, 14, 20);
         doc.setFontSize(11); doc.text(doc.splitTextToSize('Enunciado: ' + ex.txt, 268), 14, 28);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('TU PROGRAMA', 14, 42); doc.text('LO QUE HACE (cronograma simulado)', 150, 42);
@@ -1502,7 +1496,7 @@ function makePDF() {
       doc.text('El profesor lo escanea con el corrector de la Placa virtual (con contraseña) y obtiene la nota y la corrección.', 148.5, y0 + size + 10, { align: 'center' });
       doc.text('© 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0', 148.5, 200, { align: 'center' });
       const who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
-      doc.save('examen_robotica_' + who + '.pdf');
+      doc.save('desafio_robotica_' + who + '.pdf');
     });
 }
 
@@ -1544,7 +1538,7 @@ $('#retosBtn').onclick = () => { buildRetos(); openModal('#mRetos'); };
 $('#helpBtn').onclick = () => openModal('#mHelp');
 // Borrar el progreso (equipos compartidos entre grupos): se quita todo lo guardado y se recarga
 $('#resetAll').onclick = () => {
-  if (exActivo()) { say('Durante el examen no se puede borrar el progreso.', true); return; }
+  if (exActivo()) { say('Durante el desafío no se puede borrar el progreso.', true); return; }
   $('#bPdf').parentNode.hidden = !(S.exam && S.exam.codigo);
   openModal('#mBorrar');
 };
@@ -1577,7 +1571,7 @@ $('#clear').onclick = () => {
 };
 function updMute() {
   const b = $('#mute');
-  if (EXV()) { b.textContent = '♪ Sonido: no (examen)'; b.disabled = true; b.classList.add('on'); return; }
+  if (EXV()) { b.textContent = '♪ Sonido: no (desafío)'; b.disabled = true; b.classList.add('on'); return; }
   b.disabled = false; b.textContent = '♪ Sonido: ' + (S.mute ? 'no' : 'sí'); b.classList.toggle('on', !!S.mute);
 }
 $('#mute').onclick = () => { if (EXV()) return; S.mute = !S.mute; save(); updMute(); if (S.mute) toneOff(); else if (OUT.bz) toneOn(OUT.bz); };
