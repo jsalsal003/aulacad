@@ -141,16 +141,17 @@
 <header class="top">
   <a class="home" href="https://jsalsal003.github.io/" title="Volver a la portada">← Taller</a>
   <div class="brand"><h1>Vistas <span>3D</span></h1><small>SISTEMA DIÉDRICO EUROPEO · UNE 1032</small></div>
+  <button class="chip" id="resetAll" title="Borrar todo lo guardado en este equipo (dibujos, piezas hechas, nombre…) para empezar de cero">⟲ Borrar progreso</button>
   <div class="ex">
     <div class="levels" role="group" aria-label="Nivel de dificultad">
       <button class="lv" data-level="L1" title="Piezas de 2×2×2 cubos (16 piezas)">Nivel 1 <small>2×2×2</small></button>
       <button class="lv" data-level="L2" title="Piezas de 3×3×3 cubos (10 piezas, más difíciles)">Nivel 2 <small>3×3×3</small></button>
       <button class="lv" data-level="L3" title="Piezas de 2×2×2 con caras inclinadas: hay que dibujar líneas diagonales (5 piezas)">Nivel 3 <small>diagonales</small></button>
-      <button class="lv reto" data-level="R" title="Reto: 5 piezas nuevas en 30 minutos, sin ayudas. Al terminar se descarga un PDF para Classroom">⏱ Reto <small>30 min</small></button>
+      <button class="lv reto" data-level="R" title="Desafío: 5 piezas nuevas en 30 minutos, sin ayudas. Al terminar se descarga un PDF para Classroom">⏱ Desafío <small>30 min</small></button>
     </div>
     <div class="clock" id="clock" hidden>
       <span class="tl" id="timeLeft" title="Tiempo que queda">30:00</span>
-      <button class="chip go" id="entregar" title="Terminar el reto y descargar el PDF">Entregar</button>
+      <button class="chip go" id="entregar" title="Terminar el desafío y descargar el PDF">Entregar</button>
     </div>
     <button class="arrow" id="prev" title="Ejercicio anterior">◀</button>
     <div class="num">Pieza <b id="exn">01</b></div>
@@ -197,35 +198,54 @@
 </main>
 <div class="foot"><span>Dibuja las vistas con líneas continuas (aristas que se ven) y discontinuas (aristas ocultas). Arrastra de punto a punto o pulsa en un tramo.</span><span>© 2026 Juan Salguero Salguero · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener license">CC BY-NC-SA 4.0</a></span></div>
 
-<!-- ventanas del Reto -->
+<!-- ventanas del Desafío (en el código se llama «reto») -->
 <div class="modal" id="mReto" hidden>
   <div class="dlg">
-    <h3>⏱ ¿Empezar el Reto?</h3>
+    <h3>⏱ ¿Empezar el Desafío?</h3>
     <ul>
       <li>Tendrás <b>30 minutos</b> para dibujar las vistas de <b>5 piezas nuevas</b>: 2 de cubos 2×2×2, 1 de 3×3×3 y 2 con caras inclinadas.</li>
-      <li>Durante el reto <b>no hay</b> Rayos X, ni Ver solución, ni Comprobar.</li>
+      <li>Durante el desafío <b>no hay</b> Rayos X, ni Ver solución, ni Comprobar.</li>
       <li>Al terminar (o al acabarse el tiempo) se descarga un <b>PDF</b> con tus 5 láminas y un código QR para el profesor. <b>Súbelo a Classroom.</b></li>
     </ul>
     <label>Nombre y apellidos <input id="rNombre" maxlength="60" autocomplete="name"></label>
     <label>Curso y grupo <input id="rCurso" maxlength="30" placeholder="por ejemplo 2º ESO B"></label>
     <p class="err" id="rErr"></p>
-    <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="rStart">Sí, empezar el reto</button></div>
+    <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="rStart">Sí, empezar el desafío</button></div>
   </div>
 </div>
 <div class="modal" id="mEntregar" hidden>
   <div class="dlg">
     <h3>¿Entregar ya?</h3>
     <p>Después ya no podrás cambiar tus dibujos. Te quedan <b id="eLeft"></b>.</p>
-    <div class="btns"><button class="chip" data-close>Seguir con el reto</button><button class="chip go" id="eYes">Sí, entregar</button></div>
+    <div class="btns"><button class="chip" data-close>Seguir con el desafío</button><button class="chip go" id="eYes">Sí, entregar</button></div>
   </div>
 </div>
 <div class="modal" id="mFin" hidden>
   <div class="dlg">
-    <h3 id="fTitle">¡Reto terminado!</h3>
+    <h3 id="fTitle">¡Desafío terminado!</h3>
     <p>Descarga el PDF y <b>súbelo a Classroom</b>. Tiene una página por pieza y una última con el código QR para el profesor.</p>
     <p class="err" id="fErr"></p>
     <div class="btns"><button class="chip" id="fPractica">Volver a practicar</button><button class="chip go" id="fPdf">⬇ Descargar PDF</button></div>
-    <p class="small"><button class="link" id="fNuevo">Empezar otro reto</button></p>
+    <p class="small"><button class="link" id="fNuevo">Empezar otro desafío</button></p>
+  </div>
+</div>
+<div class="modal" id="mBorrar" hidden>
+  <div class="dlg">
+    <h3>¿Borrar todo el progreso?</h3>
+    <div id="bSi">
+      <p>Se borra todo lo que Vistas 3D tiene guardado <b>en este equipo y este navegador</b>, y empieza de cero:</p>
+      <ul>
+        <li>los dibujos de todas las piezas de los 3 niveles y las piezas marcadas como bien hechas,</li>
+        <li>el nombre y el curso del cajetín,</li>
+        <li>el desafío entregado, si lo hay: <b>descarga antes su PDF si todavía no lo has subido a Classroom.</b></li>
+      </ul>
+      <p>No se puede deshacer.</p>
+      <div class="btns"><button class="chip" data-close>Cancelar</button><button class="chip go" id="bYes" style="background:var(--red);color:#fff">Sí, borrar todo</button></div>
+    </div>
+    <div id="bNo">
+      <p>Durante el desafío no se puede borrar el progreso. Entrégalo primero.</p>
+      <div class="btns"><button class="chip go" data-close>Vale</button></div>
+    </div>
   </div>
 </div>
 
@@ -487,9 +507,9 @@
     var nameT = txt(bx + 10, by + 43, S.name || '…', 22, 700, 'Caveat, cursive'); nameT.setAttribute('id', 'tName'); nameT.style.cursor = 'pointer';
     var groupT = txt(bx + 10, by + 93, S.group || '…', 22, 700, 'Caveat, cursive'); groupT.setAttribute('id', 'tGroup'); groupT.style.cursor = 'pointer';
     var enReto = S.level === 'R';
-    txt(bx + 260, by + 93, enReto ? 'RETO · ' + (S.ex + 1) + '/' + PIEZAS.length : (LV.diag ? 'N3' : N + '×' + N) + ' · ' + String(S.ex + 1).padStart(2, '0'), 20, 800);
+    txt(bx + 260, by + 93, enReto ? 'DESAFÍO · ' + (S.ex + 1) + '/' + PIEZAS.length : (LV.diag ? 'N3' : N + '×' + N) + ' · ' + String(S.ex + 1).padStart(2, '0'), 20, 800);
     var nOk = checked ? ['alzado', 'planta', S.profile].filter(function (v) { return checked[v] && checked[v].ok; }).length : null;
-    txt(bx + 10, by + 140, enReto ? (retoActivo() ? 'reto en curso' : 'entregado') : nOk === null ? 'sin comprobar' : nOk + ' / 3', 18, 800).setAttribute('fill', nOk === 3 && !enReto ? '#1f8a4c' : '#14201a');
+    txt(bx + 10, by + 140, enReto ? (retoActivo() ? 'desafío en curso' : 'entregado') : nOk === null ? 'sin comprobar' : nOk + ' / 3', 18, 800).setAttribute('fill', nOk === 3 && !enReto ? '#1f8a4c' : '#14201a');
     txt(bx + 260, by + 140, 'EUROPEO', 14, 800);
     nameT.addEventListener('click', function () { ask('name', 'Tu nombre:'); });
     groupT.addEventListener('click', function () { ask('group', 'Tu curso y grupo (por ejemplo 2º ESO B):'); });
@@ -650,7 +670,7 @@
     sheetPNG().then(function (u) {
       var a = document.createElement('a');
       var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
-      a.href = u; a.download = 'vistas_' + (S.level === 'R' ? 'reto' : LV.diag ? 'diagonales' : N + 'x' + N) + '_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
+      a.href = u; a.download = 'vistas_' + (S.level === 'R' ? 'desafio' : LV.diag ? 'diagonales' : N + 'x' + N) + '_pieza' + String(S.ex + 1).padStart(2, '0') + '_' + who + '.png';
       document.body.appendChild(a); a.click(); a.remove();
     });
   };
@@ -1037,11 +1057,19 @@
     retoUI(); drawSheet(); openFin(auto);
   }
   function openFin(auto) {
-    document.getElementById('fTitle').textContent = auto ? '¡Se acabó el tiempo!' : '¡Reto terminado!';
+    document.getElementById('fTitle').textContent = auto ? '¡Se acabó el tiempo!' : '¡Desafío terminado!';
     document.getElementById('fErr').textContent = ''; show('mFin', true);
   }
   document.getElementById('fPractica').onclick = function () { show('mFin', false); setLevel('L1'); };
   document.getElementById('fNuevo').onclick = function () { openStart(); };
+  // Borrar el progreso (equipos compartidos entre grupos): se quita todo lo guardado y se recarga
+  document.getElementById('resetAll').onclick = function () {
+    show('bSi', !retoActivo()); show('bNo', retoActivo()); show('mBorrar', true);
+  };
+  document.getElementById('bYes').onclick = function () {
+    try { localStorage.removeItem(KEY); } catch (e) { /* nada */ }
+    location.reload();
+  };
   document.getElementById('fPdf').onclick = function () {
     var btn = this; btn.disabled = true; btn.textContent = 'Preparando…';
     makePDF().then(function () { btn.disabled = false; btn.textContent = '⬇ Descargar PDF'; },
@@ -1071,7 +1099,7 @@
         var usado = fmt(S.reto.fin - S.reto.inicio);
         imgs.forEach(function (u, i) {
           if (i) doc.addPage();
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('Reto de Vistas 3D  ·  Pieza ' + (i + 1) + ' de ' + imgs.length, 14, 14);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('Desafío de Vistas 3D  ·  Pieza ' + (i + 1) + ' de ' + imgs.length, 14, 14);
           doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
           doc.text(S.name + (S.group ? '  ·  ' + S.group : '') + '  ·  ' + fecha + '  ·  tiempo: ' + usado + '  ·  perfil ' + (S.reto.perfil === 'izq' ? 'izquierdo' : 'derecho'), 14, 20);
           doc.addImage(u, 'JPEG', 23.5, 24, 250, 178.6, undefined, 'FAST');
@@ -1089,7 +1117,7 @@
         doc.text('El profesor lo escanea con el corrector de Vistas 3D (con contraseña) y obtiene la nota y la corrección.', 148.5, y0 + size + 10, { align: 'center' });
         doc.text('© 2026 Juan Salguero Salguero · CC BY-NC-SA 4.0', 148.5, 200, { align: 'center' });
         var who = (S.name || 'alumno').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
-        doc.save('reto_vistas_' + who + '.pdf');
+        doc.save('desafio_vistas_' + who + '.pdf');
       })
       .finally(function () { if (prevLevel !== S.level) setLevel(prevLevel); go(Math.min(prevEx, PIEZAS.length - 1)); });
   }

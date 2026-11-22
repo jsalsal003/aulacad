@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <meta name="author" content="Juan Salguero Salguero">
-<title>Corrector del Reto · Vistas 3D</title>
+<title>Corrector del Desafío · Vistas 3D</title>
 <meta name="theme-color" content="#14201a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +66,7 @@
 </style>
 </head>
 <body>
-<header><h1>Corrector del <span>Reto</span></h1><small>VISTAS 3D · SOLO PROFESORADO</small></header>
+<header><h1>Corrector del <span>Desafío</span></h1><small>VISTAS 3D · SOLO PROFESORADO</small></header>
 <main>
   <section class="card" id="lock">
     <h2>Acceso del profesor</h2>
@@ -105,7 +105,6 @@
     });
   }
   function unlock() { document.getElementById('lock').hidden = true; document.getElementById('app').hidden = false; fromHash(); }
-  try { if (sessionStorage.getItem('vistasProfe') === HASH) unlock(); } catch (e) { /* nada */ }
   function tryPw() {
     sha256(document.getElementById('pw').value).then(function (h) {
       if (h === HASH) { try { sessionStorage.setItem('vistasProfe', HASH); } catch (e) { /* nada */ } unlock(); }
@@ -206,6 +205,9 @@
     out.scrollIntoView({ behavior: 'smooth' });
     if (location.hash) history.replaceState(null, '', location.pathname); // el código no se queda en la barra de direcciones
   }
+
+  // al final (antes se hacía arriba y fallaba al abrir el enlace con la sesión ya iniciada: aún no existían VN y TIPO)
+  try { if (sessionStorage.getItem('vistasProfe') === HASH) unlock(); } catch (e) { /* nada */ }
 })();
 </script>
 </body>
