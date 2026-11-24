@@ -88,7 +88,10 @@ T.Vista3D = function (canvas, opc) {
       const e = g.e, H = e.altura || casa.altura || 2500, m = mat(e.colorPared || casa.colorPared || '#f4efe4');
       for (const pz of g.piezas) { const ms = prisma(pz.pts, 0, H, m, S); if (ms) { ms.userData.id = e.id; grupo.add(ms); } pts.push(...pz.pts); }
       for (const h of g.huecos) {
-        const he = h.e, alto = Math.min(he.alto || 2100, H), ap = he.clase === 'ventana' ? (he.antepecho || 0) : 0;
+        // ventanas: el hueco va del antepecho hasta antepecho + alto; puertas: del suelo hasta su alto
+        const he = h.e, esVentana = he.clase === 'ventana' || he.clase === 'balconera';
+        const ap = esVentana ? Math.max(0, he.antepecho || 0) : 0;
+        const alto = Math.min(ap + (he.alto || (esVentana ? 1200 : 2100)), H);
         const q = [h['0R'], h['1R'], h['1L'], h['0L']];
         if (H > alto) { const ms = prisma(q, alto, H, m, S); if (ms) { ms.userData.id = e.id; grupo.add(ms); } }
         if (ap > 0) { const ms = prisma(q, 0, ap, m, S); if (ms) { ms.userData.id = e.id; grupo.add(ms); } }
