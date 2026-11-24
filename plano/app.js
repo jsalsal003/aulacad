@@ -239,7 +239,7 @@ async function exportarPDF() {
     if (!window.jspdf) { aviso('Preparando el PDF…'); await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); }
     const [W, H] = T.tamHoja(ed.doc);
     const pdf = new window.jspdf.jsPDF({ orientation: W > H ? 'landscape' : 'portrait', unit: 'mm', format: ed.doc.hoja.formato.toLowerCase(), compress: true });
-    pdf.setProperties({ title: ed.doc.hoja.datos.titulo || ed.doc.nombre, author: ed.doc.hoja.datos.nombre || '', creator: 'Plano 2D · Taller de Tecnología' });
+    pdf.setProperties({ title: ed.doc.hoja.datos.titulo || ed.doc.nombre, author: ed.doc.hoja.datos.nombre || '', creator: 'Plano 2D · Taller Virtual' });
     T.pintarPDF(pdf, ed.primsHoja());
     pdf.save(T.nombreArchivo(ed.doc.nombre) + '.pdf');
     aviso('PDF en Descargas. Para que la escala sea exacta, imprímelo al 100 % («Tamaño real»), sin «Ajustar a la página».');
